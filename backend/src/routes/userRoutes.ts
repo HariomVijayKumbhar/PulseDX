@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { userController } from '../controllers/userController';
 import { validate, createUserSchema, updateUserSchema, idParamSchema } from '../middleware/validate';
 import { writeLimiter } from '../middleware/rateLimiter';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -15,6 +16,9 @@ router.post(
 
 // GET /api/users - List all users
 router.get('/', userController.getUsers);
+
+// GET /api/users/me - Get current user (must be registered BEFORE /:id)
+router.get('/me', authenticate, userController.getCurrentUser);
 
 // GET /api/users/:id - Get single user
 router.get(

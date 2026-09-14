@@ -35,23 +35,27 @@ export async function getCurrentUser(): Promise<ApiResponse<UserProfile>> {
 }
 
 /**
- * Fetch user activity log — backend has no activities endpoint; mock for now
+ * Fetch user activity log.
+ * NOTE: backend has no /users/me/activities endpoint yet — serve mock data directly
+ * to avoid 404 console noise. Swap to apiClient when the endpoint exists.
  */
 export async function getUserActivities(): Promise<ApiResponse<ActivityItem[]>> {
-  return apiClient<ActivityItem[]>(
-    '/users/me/activities',
-    { method: 'GET' },
-    () => MOCK_ACTIVITIES
-  );
+  return {
+    data: MOCK_ACTIVITIES,
+    success: true,
+    timestamp: new Date().toISOString(),
+  };
 }
 
 /**
- * Fetch developer productivity metrics — backend has no analytics endpoint; mock for now
+ * Fetch developer productivity metrics.
+ * NOTE: backend has no /analytics/productivity-summary endpoint yet — serve mock data
+ * directly to avoid 404 console noise. Swap to apiClient when the endpoint exists.
  */
 export async function getProductivitySummary(): Promise<ApiResponse<ProductivitySummary>> {
-  return apiClient<ProductivitySummary>(
-    '/analytics/productivity-summary',
-    { method: 'GET' },
-    () => MOCK_PRODUCTIVITY_SUMMARY
-  );
+  return {
+    data: MOCK_PRODUCTIVITY_SUMMARY,
+    success: true,
+    timestamp: new Date().toISOString(),
+  };
 }

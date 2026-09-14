@@ -22,6 +22,44 @@ export class UserController {
     }
   }
 
+  /**
+   * GET /api/users/me - Returns the authenticated user when a valid Bearer token is
+   * provided; otherwise falls back to the most recently active user (development mode).
+   * Must be registered before the /users/:id route.
+   */
+  public async getCurrentUser(
+    req: Request,
+    res: Response<ApiSuccessResponse<User>>,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      // 1. Authenticated via Bearer token (set by `authenticate` middleware)
+      if (req.user?.id) {
+        const authedUser = await userService.getUserById(req.user.id).catch(() => null);
+        if (authedUser) {
+          res.status(200).json({ data: authedUser, meta: { timestamp: new Date().toISOString() } });
+          return;
+        }
+      }
+
+      // 2. Fallback: most recently created user (single-tenant dev mode)
+      const result = await userService.getUsers({ sortBy: 'created_at', order: 'desc', limit: 1, page: 1 });
+      const first = result.data[0];
+      if (!first) {
+        res.status(404).json({
+          error: { message: 'No users exist yet. Create a user first.', code: 'NOT_FOUND' },
+        } as any);
+        return;
+      }
+      res.status(200).json({
+        data: first,
+        meta: { timestamp: new Date().toISOString() },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   public async getUsers(
     req: Request,
     res: Response<ApiSuccessResponse<User[]>>,

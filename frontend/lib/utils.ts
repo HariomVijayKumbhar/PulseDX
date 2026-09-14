@@ -5,16 +5,20 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(dateString: string): string {
+export function formatDate(dateString?: string | null): string {
+  if (!dateString) return '—';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '—';
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
   }).format(date);
 }
 
-export function formatTimeAgo(dateString: string): string {
+export function formatTimeAgo(dateString?: string | null): string {
+  if (!dateString) return '—';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '—';
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
