@@ -3,6 +3,7 @@ import userRoutes from './userRoutes';
 import projectRoutes from './projectRoutes';
 import taskRoutes from './taskRoutes';
 import statsRoutes from './statsRoutes';
+import aiRoutes from './aiRoutes';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/users', userRoutes);
 router.use('/projects', projectRoutes);
 router.use('/tasks', taskRoutes);
 router.use('/stats', statsRoutes);
+router.use('/ai', aiRoutes);
 
 export default router;

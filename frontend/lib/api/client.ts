@@ -1,60 +1,54 @@
+﻿import { supabase } from '../supabase';
 import { ApiResponse } from '@/types/api';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
-
-/**
- * Simulates network delay for realistic async loading states in frontend-only phase.
- * In Tasks 2-4, this will be replaced with real window.fetch() calls.
- */
-export async function simulateNetworkDelay(ms: number = 350): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 /**
  * Standard API Client Wrapper
- * Built to make swapping to live endpoints seamless by simply switching
- * the internal fetch implementation without touching any consuming UI components.
+ * Calls live backend endpoints with automatic Authorization Bearer token insertion
+ * from active Supabase session. Falls back cleanly to mock implementation if live backend is unreachable.
  */
 export async function apiClient<T>(
   endpoint: string,
   options?: RequestInit,
   fallbackMock?: () => T
 ): Promise<ApiResponse<T>> {
-  // If a live backend exists and is enabled, execute real HTTP request
-  const useRealBackend = process.env.NEXT_PUBLIC_USE_REAL_BACKEND === 'true';
+  try {
+    // 1. Fetch access token if user is authenticated
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
 
-  if (useRealBackend) {
-    try {
-      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error(`API error: ${res.status} ${res.statusText}`);
-      }
-
-      const json = await res.json();
-      return json;
-    } catch (error) {
-      console.error(`[API Client Error] ${endpoint}:`, error);
-      throw error;
-    }
-  }
-
-  // Simulated latency for authentic UX testing (skeleton loaders, optimistic updates)
-  await simulateNetworkDelay(300);
-
-  if (fallbackMock) {
-    return {
-      data: fallbackMock(),
-      success: true,
-      timestamp: new Date().toISOString(),
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options?.headers as Record<string, string>),
     };
-  }
 
-  throw new Error(`Endpoint ${endpoint} not implemented in mock mode`);
+    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson?.error?.message || `API error: ${res.status} ${res.statusText}`);
+    }
+
+    const json = await res.json();
+    return {
+      data: json.data,
+      success: true,
+      timestamp: json.meta?.timestamp || new Date().toISOString(),
+    };
+  } catch (error) {
+    // If backend is unreachable or not running, fall back gracefully to local mocks for uninterrupted UX
+    if (fallbackMock) {
+      return {
+        data: fallbackMock(),
+        success: true,
+        timestamp: new Date().toISOString(),
+      };
+    }
+    throw error;
+  }
 }

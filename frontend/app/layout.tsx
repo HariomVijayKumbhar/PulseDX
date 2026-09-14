@@ -1,7 +1,8 @@
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
+import { AuthProvider } from '@/context/AuthContext';
 import { Navbar } from '@/components/layout/Navbar';
 import { DynamicParticleBackground } from '@/components/3d/DynamicScenes';
 import { Toaster } from 'sonner';
@@ -33,32 +34,34 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} font-sans min-h-screen bg-background text-foreground antialiased selection:bg-indigo-500 selection:text-white transition-colors duration-300 relative overflow-x-hidden`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
-          disableTransitionOnChange={false}
-        >
-          {/* Subtle Ambient 3D Particle Field */}
-          <DynamicParticleBackground />
+        <AuthProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem={false}
+            disableTransitionOnChange={false}
+          >
+            {/* Subtle Ambient 3D Particle Field */}
+            <DynamicParticleBackground />
 
-          {/* Primary Navigation Bar */}
-          <Navbar user={MOCK_USER} />
+            {/* Primary Navigation Bar */}
+            <Navbar user={MOCK_USER} />
 
-          {/* Page Container */}
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-            {children}
-          </main>
+            {/* Page Container */}
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+              {children}
+            </main>
 
-          {/* Rich Toast Notifications */}
-          <Toaster
-            position="top-right"
-            richColors
-            toastOptions={{
-              className: 'glass-panel text-foreground border-border',
-            }}
-          />
-        </ThemeProvider>
+            {/* Rich Toast Notifications */}
+            <Toaster
+              position="top-right"
+              richColors
+              toastOptions={{
+                className: 'glass-panel text-foreground border-border',
+              }}
+            />
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );
