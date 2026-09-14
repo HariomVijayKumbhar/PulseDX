@@ -1,17 +1,28 @@
 import { Project, ProjectStatus } from '@/types/project';
 import { ApiResponse, ProjectFilterOptions } from '@/types/api';
 import { apiClient } from './client';
+import { mapBackendProject, BackendProject } from './mappers';
 import { MOCK_PROJECTS } from '../mock-data';
 
-// Local memory store during session for mutations
+// Local memory store during session for mock fallback
 let projectsStore: Project[] = [...MOCK_PROJECTS];
 
+/** Detect whether a row is a raw backend project (has name/owner_id, no title) */
+function isBackendRow(row: any): boolean {
+  return row && typeof row === 'object' && 'name' in row && !('title' in row);
+}
+
 /**
- * Fetch all projects matching filter parameters
+ * Fetch all projects — live backend: GET /projects (supports search, pagination, sorting)
  */
 export async function getProjects(filters?: ProjectFilterOptions): Promise<ApiResponse<Project[]>> {
-  return apiClient<Project[]>(
-    '/projects',
+  const params = new URLSearchParams();
+  if (filters?.searchQuery) params.set('search', filters.searchQuery);
+  if (filters?.status && filters.status !== 'all') params.set('status', filters.status);
+
+  const qs = params.toString();
+  const res = await apiClient<Project[]>(
+    `/projects${qs ? `?${qs}` : ''}`,
     { method: 'GET' },
     () => {
       let filtered = [...projectsStore];
@@ -38,13 +49,20 @@ export async function getProjects(filters?: ProjectFilterOptions): Promise<ApiRe
       return filtered;
     }
   );
+
+  if (!res.success) return res;
+  const rows = res.data as unknown as any[];
+  if (Array.isArray(rows) && rows.length > 0 && isBackendRow(rows[0])) {
+    return { ...res, data: rows.map((r) => mapBackendProject(r as BackendProject)) };
+  }
+  return res;
 }
 
 /**
- * Fetch a single project by ID
+ * Fetch a single project by ID — live backend: GET /projects/:id
  */
 export async function getProjectById(id: string): Promise<ApiResponse<Project>> {
-  return apiClient<Project>(
+  const res = await apiClient<Project>(
     `/projects/${id}`,
     { method: 'GET' },
     () => {
@@ -55,10 +73,14 @@ export async function getProjectById(id: string): Promise<ApiResponse<Project>> 
       return found;
     }
   );
+  if (res.success && res.data && isBackendRow(res.data as any)) {
+    return { ...res, data: mapBackendProject(res.data as unknown as BackendProject) };
+  }
+  return res;
 }
 
 /**
- * Update project progress or status (mock mutation)
+ * Update project progress (mock-only mutation; live backend has no progress field)
  */
 export async function updateProjectProgress(
   id: string,

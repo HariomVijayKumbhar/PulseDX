@@ -71,7 +71,7 @@ app.use('/api', apiRouter);
 
 // ── 404 handler for any route not matched above
 app.use((_req: Request, _res: Response, next: NextFunction) => {
-  next(new NotFoundError('Route not found'));
+  next(new NotFoundError());
 });
 
 // ── Centralised error handler (must be last)
