@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+﻿import { Request, Response, NextFunction } from 'express';
 import { z, ZodSchema } from 'zod';
 
 /**
@@ -51,6 +51,18 @@ export const createUserSchema = z.object({
   avatarUrl: z.string().url('Avatar URL must be a valid URL').optional().or(z.literal('')),
   role: z.string().min(2, 'Role must be at least 2 characters').optional(),
 });
+
+export const updateUserSchema = z
+  .object({
+    name: z.string().min(2, 'Name must be at least 2 characters').max(100).trim().optional(),
+    email: z.string().email('Invalid email address format').toLowerCase().trim().optional(),
+    avatarUrl: z.string().url('Avatar URL must be a valid URL').optional().or(z.literal('')),
+    role: z.string().min(2, 'Role must be at least 2 characters').optional(),
+  })
+  .refine(
+    (data) => Object.keys(data).length > 0,
+    { message: 'At least one field must be provided to update the user' }
+  );
 
 // ---------------------------------------------------------------------------
 // Project Validation Schemas
@@ -116,6 +128,14 @@ export const updateTaskSchema = z
   );
 
 export const taskFilterQuerySchema = z.object({
-  status: taskStatusEnum.optional(),
-  projectId: z.string().min(1).optional(),
+  status: z.string().optional(),
+  priority: z.string().optional(),
+  projectId: z.string().optional(),
+  assigneeId: z.string().optional(),
+  search: z.string().optional(),
+  includeJoined: z.string().optional(),
+  page: z.string().optional(),
+  limit: z.string().optional(),
+  sortBy: z.string().optional(),
+  order: z.enum(['asc', 'desc']).optional(),
 });

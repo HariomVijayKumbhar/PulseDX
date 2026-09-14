@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+﻿import { Request, Response, NextFunction } from 'express';
 import { projectService } from '../services/projectService';
 import { ApiSuccessResponse } from '../models/api.model';
 import { Project } from '../models/project.model';
@@ -28,11 +28,20 @@ export class ProjectController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const projects = await projectService.getProjects();
+      const query = {
+        search: req.query.search as string | undefined,
+        page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+        sortBy: req.query.sortBy as string | undefined,
+        order: (req.query.order as 'asc' | 'desc') || undefined,
+      };
+
+      const result = await projectService.getProjects(query);
       res.status(200).json({
-        data: projects,
+        data: result.data,
         meta: {
-          total: projects.length,
+          total: result.total,
+          ...(result.page ? { page: result.page, limit: result.limit } : {}),
           timestamp: new Date().toISOString(),
         },
       });
@@ -50,6 +59,24 @@ export class ProjectController {
       const project = await projectService.getProjectById(req.params.id);
       res.status(200).json({
         data: project,
+        meta: {
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async updateProject(
+    req: Request,
+    res: Response<ApiSuccessResponse<Project>>,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const updated = await projectService.updateProject(req.params.id, req.body);
+      res.status(200).json({
+        data: updated,
         meta: {
           timestamp: new Date().toISOString(),
         },

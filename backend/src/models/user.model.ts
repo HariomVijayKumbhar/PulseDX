@@ -14,6 +14,13 @@ export interface User {
   createdAt: string;
 }
 
+export interface UpdateUserInput {
+  name?: string;
+  email?: string;
+  avatarUrl?: string;
+  role?: string;
+}
+
 export interface CreateUserInput {
   name: string;
   email: string;

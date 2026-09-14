@@ -54,6 +54,18 @@ app.use(
   })
 );
 
+// ── Root route (API info)
+app.get('/', (_req: Request, res: Response) => {
+  res.json({
+    data: {
+      name: 'PulseDX API',
+      docs: '/api/docs',
+      health: '/api/health',
+      endpoints: ['/api/users', '/api/projects', '/api/tasks'],
+    },
+  });
+});
+
 // ── API routes
 app.use('/api', apiRouter);
 

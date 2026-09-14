@@ -1,12 +1,13 @@
-import { Request, Response, NextFunction } from 'express';
+﻿import { Request, Response, NextFunction } from 'express';
+import { supabase } from '../lib/supabaseClient';
 
-// Extend Express Request object to hold authenticated user context in Task 4
+// Extend Express Request object to hold authenticated user context
 declare global {
   namespace Express {
     interface Request {
       user?: {
         id: string;
-        email: string;
+        email?: string;
         role?: string;
       };
     }
@@ -14,48 +15,44 @@ declare global {
 }
 
 /**
- * ============================================================================
- * PLACEHOLDER AUTHENTICATION MIDDLEWARE (TASK 4 READY)
- * ============================================================================
- * TODO (Task 4):
- * 1. Extract Bearer token from req.headers.authorization
- * 2. Verify JWT using process.env.JWT_SECRET
- * 3. Attach decoded user payload to req.user
- * 4. Return 401 Unauthorized if token is missing or invalid
- *
- * Currently, in Task 2 this middleware acts as an optional pass-through or
- * attaches a mock user context if an Authorization header is supplied.
- * ============================================================================
+ * Authentication middleware that extracts Bearer token and verifies via Supabase auth
  */
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1];
-    // Placeholder mock verification: attach mock identity
-    req.user = {
-      id: 'usr_98a72f01',
-      email: 'alex.vance@acme-labs.io',
-      role: 'lead_developer',
-    };
+    try {
+      const { data, error } = await supabase.auth.getUser(token);
+      if (error || !data.user) {
+        // In permissive/optional phase, pass through or let requireAuth guard it
+      } else {
+        req.user = {
+          id: data.user.id,
+          email: data.user.email,
+          role: data.user.role,
+        };
+      }
+    } catch (err) {
+      console.error('Supabase JWT verification failed:', err);
+    }
   }
 
-  // Pass through to next handler (Task 2 backend-only phase)
   next();
 }
 
 /**
- * Optional strict guard for protected routes (Task 4 preview)
+ * Strict guard for protected routes (rejects unauthenticated requests with 401)
  */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  // TODO (Task 4): Uncomment strict enforcement when real login is integrated:
-  // if (!req.user) {
-  //   return res.status(401).json({
-  //     error: {
-  //       message: 'Authentication token is required to access this resource',
-  //       code: 'UNAUTHORIZED',
-  //     },
-  //   });
-  // }
+  if (!req.user) {
+    res.status(401).json({
+      error: {
+        message: 'Authentication token is required to access this resource',
+        code: 'UNAUTHORIZED',
+      },
+    });
+    return;
+  }
   next();
 }

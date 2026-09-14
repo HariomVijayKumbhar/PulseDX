@@ -1,7 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
+﻿import { Request, Response, NextFunction } from 'express';
 import { taskService } from '../services/taskService';
 import { ApiSuccessResponse } from '../models/api.model';
-import { Task, TaskStatus } from '../models/task.model';
+import { Task } from '../models/task.model';
+import { StatsOverview } from '../models/stats.model';
 
 export class TaskController {
   public async createTask(
@@ -29,15 +30,24 @@ export class TaskController {
   ): Promise<void> {
     try {
       const filters = {
-        status: req.query.status as TaskStatus | undefined,
+        status: req.query.status as string | undefined,
+        priority: req.query.priority as string | undefined,
         projectId: req.query.projectId as string | undefined,
+        assigneeId: req.query.assigneeId as string | undefined,
+        search: req.query.search as string | undefined,
+        includeJoined: req.query.includeJoined === 'true',
+        page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+        sortBy: req.query.sortBy as string | undefined,
+        order: (req.query.order as 'asc' | 'desc') || undefined,
       };
 
-      const tasks = await taskService.getTasks(filters);
+      const result = await taskService.getTasks(filters);
       res.status(200).json({
-        data: tasks,
+        data: result.data,
         meta: {
-          total: tasks.length,
+          total: result.total,
+          ...(result.page ? { page: result.page, limit: result.limit } : {}),
           timestamp: new Date().toISOString(),
         },
       });
@@ -52,7 +62,8 @@ export class TaskController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const task = await taskService.getTaskById(req.params.id);
+      const includeJoined = req.query.includeJoined !== 'false';
+      const task = await taskService.getTaskById(req.params.id, includeJoined);
       res.status(200).json({
         data: task,
         meta: {
@@ -89,8 +100,25 @@ export class TaskController {
   ): Promise<void> {
     try {
       await taskService.deleteTask(req.params.id);
-      // 204 No Content for successful deletion
       res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async getStatsOverview(
+    _req: Request,
+    res: Response<ApiSuccessResponse<StatsOverview>>,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const stats = await taskService.getStatsOverview();
+      res.status(200).json({
+        data: stats,
+        meta: {
+          timestamp: new Date().toISOString(),
+        },
+      });
     } catch (error) {
       next(error);
     }
