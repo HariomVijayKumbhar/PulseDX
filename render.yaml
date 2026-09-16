@@ -1,0 +1,66 @@
+# ============================================================
+# Render Blueprint — deploys both services with one click
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Usage: Push this file to the repo root, then in Render Dashboard
+#        go to "Blueprints" -> "New Blueprint Instance" and select
+#        this repo. Render will create both services automatically.
+#
+# Or deploy via CLI:  render blueprint launch
+# ============================================================
+
+services:
+  # ── Backend API (Express) ──────────────────────────────────
+  - type: web
+    name: pulsedx-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false # set value in dashboard (secret)
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        # filled in after frontend URL is known; set in dashboard
+        sync: false
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "900000"
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "100"
+      - key: RATE_LIMIT_WRITE_MAX_REQUESTS
+        value: "30"
+
+  # ── Frontend (Next.js Web Service) ─────────────────────────
+  - type: web
+    name: pulsedx-frontend
+    runtime: node
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    plan: free
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NEXT_PUBLIC_API_URL
+        # replace with your backend service URL after first deploy
+        value: https://pulsedx-api.onrender.com/api
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NEXT_PUBLIC_ENABLE_3D_HERO
+        value: "true"
+      - key: NEXT_PUBLIC_ENABLE_PARTICLES
+        value: "true"
