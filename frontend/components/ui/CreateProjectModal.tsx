@@ -63,7 +63,7 @@ export function CreateProjectModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl relative"
+        className="w-full max-w-lg glass-panel p-5 sm:p-8 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl relative max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

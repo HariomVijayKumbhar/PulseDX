@@ -320,10 +320,10 @@ export default function Avatar3DCard({ config, selected, onClick }: Avatar3DCard
       <div className={`absolute inset-0 bg-gradient-to-br ${config.bgGradient} dark:opacity-80`} />
 
       {/* 3D Canvas */}
-      <div className="relative w-full" style={{ height: '90px' }}>
+      <div className="relative w-full" style={{ height: '90px', touchAction: 'pan-y' }}>
         <Canvas
           camera={{ position: [0, 0, 2.8], fov: 42 }}
-          gl={{ antialias: true, alpha: true }}
+          gl={{ antialias: true, alpha: true, powerPreference: 'low-power' }}
           style={{ width: '100%', height: '100%' }}
         >
           <AvatarScene config={config} hovered={hovered || selected} />

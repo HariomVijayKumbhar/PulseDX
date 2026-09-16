@@ -85,15 +85,15 @@ export function GlobalSearchModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-24 p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-start justify-center pt-4 sm:pt-20 p-3 sm:p-4 animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl glass-panel rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden relative"
+        className="w-full max-w-xl glass-panel rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search Input Bar */}
-        <div className="p-4 border-b border-slate-200/60 dark:border-slate-800/80 flex items-center gap-3">
+        <div className="p-3.5 sm:p-4 border-b border-slate-200/60 dark:border-slate-800/80 flex items-center gap-3">
           <Search className="w-5 h-5 text-indigo-500 shrink-0" />
           <input
             ref={inputRef}
@@ -117,7 +117,7 @@ export function GlobalSearchModal({
         </div>
 
         {/* Search Results */}
-        <div className="max-h-96 overflow-y-auto p-4 space-y-4">
+        <div className="max-h-[65vh] sm:max-h-96 overflow-y-auto p-3 sm:p-4 space-y-4">
           {/* Sprint Tasks Section */}
           {filteredTasks.length > 0 && (
             <div>

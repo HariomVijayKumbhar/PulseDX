@@ -143,7 +143,7 @@ export default function RegisterPage() {
             <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
               Choose Your 3D Avatar
             </label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
               {AVATAR_3D_OPTIONS.map((avatar) => (
                 <Avatar3DCard
                   key={avatar.id}
@@ -154,7 +154,7 @@ export default function RegisterPage() {
               ))}
             </div>
             <p className="text-[11px] text-muted-foreground/70 mt-2 text-center">
-              Hover to animate · Click to select
+              Tap or hover to animate &bull; Select your persona
             </p>
           </div>
 

@@ -87,8 +87,17 @@ export function Navbar({ user }: NavbarProps) {
             </div>
 
             {/* Right Action Bar */}
-            <div className="flex items-center gap-2.5">
-              {/* Quick Search Trigger */}
+            <div className="flex items-center gap-1.5 sm:gap-2.5">
+              {/* Mobile Quick Search Button */}
+              <button
+                onClick={() => setSearchModalOpen(true)}
+                className="sm:hidden p-2 rounded-xl glass-pill text-muted-foreground hover:text-foreground focus:outline-none"
+                aria-label="Search dashboard"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+
+              {/* Desktop Quick Search Trigger */}
               <button
                 id="global-search-trigger"
                 onClick={() => setSearchModalOpen(true)}
@@ -107,55 +116,68 @@ export function Navbar({ user }: NavbarProps) {
               {/* Dark / Light Theme Toggle */}
               <ThemeToggle />
 
-            {/* User Profile */}
-            <UserProfileDropdown user={user} />
+              {/* User Profile */}
+              <UserProfileDropdown user={user} />
 
-            {/* Mobile Hamburger Menu Toggle */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-xl glass-pill text-muted-foreground hover:text-foreground focus:outline-none"
-              aria-label="Toggle navigation menu"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+              {/* Mobile Hamburger Menu Toggle */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden p-2 rounded-xl glass-pill text-muted-foreground hover:text-foreground focus:outline-none"
+                aria-label="Toggle navigation menu"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Mobile Drawer Menu */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="md:hidden border-t border-slate-200/60 dark:border-slate-800/80 bg-background/95 backdrop-blur-2xl px-4 pt-2 pb-4 space-y-1 shadow-xl"
-          >
-            {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                    isActive
-                      ? 'text-primary bg-indigo-50 dark:bg-indigo-950/50 font-semibold'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800/50'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </header>
-    <GlobalSearchModal isOpen={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
+        {/* Mobile Drawer Menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden border-t border-slate-200/60 dark:border-slate-800/80 bg-background/95 backdrop-blur-2xl px-4 pt-3 pb-5 space-y-2 shadow-xl"
+            >
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setSearchModalOpen(true);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium bg-slate-100/80 dark:bg-slate-900/60 text-muted-foreground border border-slate-200 dark:border-slate-800 text-left"
+              >
+                <Search className="w-4 h-4 text-indigo-500" />
+                <span>Search dashboard (tasks, projects)...</span>
+              </button>
+
+              <div className="pt-1 space-y-1">
+                {NAV_ITEMS.map((item) => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        isActive
+                          ? 'text-primary bg-indigo-50 dark:bg-indigo-950/60 font-semibold shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </header>
+      <GlobalSearchModal isOpen={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
     </>
   );
 }

@@ -25,9 +25,9 @@ export function StatsCardSection({ summary, isLoading }: StatsCardSectionProps) 
   return (
     <div className="glass-panel p-6 rounded-3xl flex flex-col justify-between relative overflow-hidden group">
       {/* Header with 3D/2D toggle */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-bold text-foreground">Project Completion Velocity</h3>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500 font-semibold flex items-center gap-1">
               <Sparkles className="w-2.5 h-2.5" />
@@ -40,7 +40,7 @@ export function StatsCardSection({ summary, isLoading }: StatsCardSectionProps) 
         </div>
 
         {/* View mode toggle */}
-        <div className="flex items-center p-1 rounded-xl glass-pill">
+        <div className="flex items-center p-1 rounded-xl glass-pill self-start sm:self-auto shrink-0">
           <button
             onClick={() => setViewMode('3d')}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
@@ -50,7 +50,7 @@ export function StatsCardSection({ summary, isLoading }: StatsCardSectionProps) 
             }`}
           >
             <Box className="w-3.5 h-3.5" />
-            <span>3D Spatial</span>
+            <span>3D<span className="hidden sm:inline"> Spatial</span></span>
           </button>
           <button
             onClick={() => setViewMode('2d')}
@@ -61,7 +61,7 @@ export function StatsCardSection({ summary, isLoading }: StatsCardSectionProps) 
             }`}
           >
             <BarChart2 className="w-3.5 h-3.5" />
-            <span>2D Flat</span>
+            <span>2D<span className="hidden sm:inline"> Flat</span></span>
           </button>
         </div>
       </div>

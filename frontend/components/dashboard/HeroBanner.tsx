@@ -71,7 +71,7 @@ export function HeroBanner({ user, onNewTaskClick }: HeroBannerProps) {
             <DynamicHero3D />
           </div>
           <div className="absolute bottom-1 right-2 text-[10px] font-mono text-muted-foreground/60 select-none">
-            Interactive R3F Mesh &bull; Mouse Parallax
+            Interactive R3F &bull; Motion &amp; Touch
           </div>
         </div>
       </div>

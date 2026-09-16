@@ -14,7 +14,7 @@ export function PageContainer({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-16 sm:pb-20 pb-safe w-full overflow-x-hidden">
       {children}
     </main>
   );

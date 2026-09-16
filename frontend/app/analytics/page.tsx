@@ -43,23 +43,23 @@ export default function AnalyticsPage() {
 
       {/* Weekly Velocity Breakdown Table/Chart */}
       {summary && (
-        <div className="glass-panel p-6 rounded-3xl space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="glass-panel p-4 sm:p-6 rounded-2xl sm:rounded-3xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
             <div>
               <h3 className="text-base font-bold text-foreground">Weekly Velocity Trend</h3>
               <p className="text-xs text-muted-foreground">Focus hours and commits logged by day</p>
             </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500 self-start sm:self-auto">
               <TrendingUp className="w-3.5 h-3.5" />
               <span>+18% vs Last Sprint</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 pt-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 sm:gap-3 pt-2">
             {summary.weeklyVelocity.map((day) => (
               <div
                 key={day.day}
-                className="p-3.5 rounded-2xl bg-slate-100/60 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800/60 text-center space-y-2 hover:border-primary/40 transition-colors"
+                className="p-2.5 sm:p-3.5 rounded-2xl bg-slate-100/60 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800/60 text-center space-y-1.5 sm:space-y-2 hover:border-primary/40 transition-colors"
               >
                 <div className="text-xs font-bold text-muted-foreground">{day.day}</div>
                 <div className="text-xl font-extrabold text-foreground">{day.hours}h</div>

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
@@ -77,7 +77,7 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 glass-panel rounded-2xl p-4 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 border border-slate-200/60 dark:border-slate-800/80">
+        <div className="fixed sm:absolute inset-x-3 sm:inset-x-auto sm:right-0 top-16 sm:top-auto sm:mt-2 w-auto sm:w-72 glass-panel rounded-2xl p-4 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 border border-slate-200/60 dark:border-slate-800/80">
           {/* Header */}
           <div className="flex items-center gap-3 pb-3 border-b border-slate-200/50 dark:border-slate-800/60">
             <img

@@ -31,7 +31,7 @@ export default function SettingsPage() {
       </div>
 
       {/* User Profile Card */}
-      <div className="glass-panel p-6 rounded-3xl space-y-6">
+      <div className="glass-panel p-4 sm:p-6 rounded-2xl sm:rounded-3xl space-y-5 sm:space-y-6">
         <h3 className="text-base font-bold text-foreground flex items-center gap-2">
           <User className="w-4 h-4 text-indigo-500" />
           <span>Profile Details</span>
@@ -41,11 +41,11 @@ export default function SettingsPage() {
           <img
             src={MOCK_USER.avatarUrl}
             alt={MOCK_USER.name}
-            className="w-16 h-16 rounded-2xl object-cover ring-2 ring-primary/40"
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover ring-2 ring-primary/40 shrink-0"
           />
-          <div>
-            <h4 className="text-base font-bold text-foreground">{MOCK_USER.name}</h4>
-            <p className="text-xs text-muted-foreground">{MOCK_USER.email}</p>
+          <div className="min-w-0">
+            <h4 className="text-base font-bold text-foreground truncate">{MOCK_USER.name}</h4>
+            <p className="text-xs text-muted-foreground truncate">{MOCK_USER.email}</p>
             <span className="inline-block mt-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
               {MOCK_USER.roleDisplay} &bull; {MOCK_USER.team}
             </span>
@@ -54,7 +54,7 @@ export default function SettingsPage() {
       </div>
 
       {/* API Gateway Configuration */}
-      <form onSubmit={handleSave} className="glass-panel p-6 rounded-3xl space-y-6">
+      <form onSubmit={handleSave} className="glass-panel p-4 sm:p-6 rounded-2xl sm:rounded-3xl space-y-5 sm:space-y-6">
         <h3 className="text-base font-bold text-foreground flex items-center gap-2">
           <Key className="w-4 h-4 text-purple-500" />
           <span>Backend Integration Settings (Task 2-4 Forward Compatibility)</span>

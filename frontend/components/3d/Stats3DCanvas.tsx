@@ -161,10 +161,10 @@ export default function Stats3DCanvas({ stats }: Stats3DCanvasProps) {
   }
 
   return (
-    <div className="w-full h-56 relative">
+    <div className="w-full h-56 relative touch-pan-y" style={{ touchAction: 'pan-y' }}>
       <Canvas
         camera={{ position: [0, 1.2, 4.2], fov: 45 }}
-        gl={{ antialias: true, alpha: true }}
+        gl={{ antialias: true, alpha: true, powerPreference: 'low-power' }}
       >
         <ambientLight intensity={0.7} />
         <pointLight position={[5, 10, 5]} intensity={1.5} />

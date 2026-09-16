@@ -113,7 +113,7 @@ export function BentoGrid() {
           onClick={() => setAiModalOpen(false)}
         >
           <div
-            className="w-full max-w-lg glass-panel p-6 rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl relative"
+            className="w-full max-w-lg glass-panel p-5 sm:p-6 rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl relative max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-4 border-b border-slate-200/50 dark:border-slate-800/60 mb-4">
