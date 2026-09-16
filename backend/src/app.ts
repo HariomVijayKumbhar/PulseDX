@@ -66,6 +66,11 @@ app.get('/', (_req: Request, res: Response) => {
   });
 });
 
+// ── Favicon (avoid noisy 404s from browsers hitting the API root)
+app.get('/favicon.ico', (_req: Request, res: Response) => {
+  res.status(204).end();
+});
+
 // ── API routes
 app.use('/api', apiRouter);
 

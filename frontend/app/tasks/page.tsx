@@ -1,13 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useDashboardData } from '@/lib/hooks/useDashboardData';
 import { TaskListSection } from '@/components/dashboard/TaskListSection';
-import { CheckSquare, Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
+import { CreateTaskModal } from '@/components/ui/CreateTaskModal';
+import { CheckSquare } from 'lucide-react';
 
 export default function TasksPage() {
   const {
+    projects,
     tasks,
     isTasksLoading,
     isLoading,
@@ -18,7 +19,10 @@ export default function TasksPage() {
     searchQuery,
     setSearchQuery,
     handleToggleTaskStatus,
+    refreshTasks,
   } = useDashboardData();
+
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   return (
     <div className="space-y-6 pb-16">
@@ -43,7 +47,20 @@ export default function TasksPage() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onToggleStatus={handleToggleTaskStatus}
-        onNewTaskClick={() => toast.info('New Task Drawer (Placeholder for Task 2)')}
+        onNewTaskClick={() => setCreateModalOpen(true)}
+      />
+
+      <CreateTaskModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        projects={projects}
+        onTaskCreated={() =>
+          refreshTasks({
+            status: statusFilter,
+            priority: priorityFilter,
+            searchQuery: searchQuery.trim(),
+          })
+        }
       />
     </div>
   );

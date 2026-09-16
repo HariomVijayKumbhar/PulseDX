@@ -1,4 +1,4 @@
-﻿// AI Assistant Router for PulseDX
+// AI Assistant Router for PulseDX
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { validate } from '../middleware/validate';
@@ -6,6 +6,7 @@ import { requireAuth } from '../middleware/auth';
 import { writeLimiter } from '../middleware/rateLimiter';
 import { taskService } from '../services/taskService';
 import { projectService } from '../services/projectService';
+import { AiSuggestedTask } from '../models/ai.model';
 
 const router = Router();
 
@@ -36,7 +37,7 @@ router.post(
       const { goal, projectId } = req.body;
       const apiKey = process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY;
 
-      let generatedTasks: Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' | 'urgent' }> = [];
+      let generatedTasks: AiSuggestedTask[] = [];
 
       if (apiKey && process.env.OPENAI_API_KEY) {
         try {

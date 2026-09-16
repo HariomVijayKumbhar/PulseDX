@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { useDashboardData } from '@/lib/hooks/useDashboardData';
@@ -10,6 +10,7 @@ import { TaskListSection } from './TaskListSection';
 import { StatsCardSection } from './StatsCardSection';
 import { ActivityFeed } from './ActivityFeed';
 import { CommandPalette } from '@/components/palette/CommandPalette';
+import { CreateTaskModal } from '@/components/ui/CreateTaskModal';
 import { FolderKanban, Sparkles, Bot, PlusCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -30,7 +31,11 @@ export function BentoGrid() {
     setSearchQuery,
     handleToggleTaskStatus,
     loadAllData,
+    refreshTasks,
   } = useDashboardData();
+
+  // Create Task Modal State
+  const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
 
   // AI Assistant Modal State
   const [aiModalOpen, setAiModalOpen] = useState(false);
@@ -43,7 +48,7 @@ export function BentoGrid() {
     if (!aiGoal) return;
     setIsAiLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api';
       const res = await fetch(`${apiUrl}/ai/suggest-tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -71,7 +76,7 @@ export function BentoGrid() {
       {/* Hero Welcome Banner with 3D Abstract Geometry */}
       <HeroBanner
         user={user}
-        onNewTaskClick={() => setAiModalOpen(true)}
+        onNewTaskClick={() => setCreateTaskModalOpen(true)}
       />
 
       {/* AI Sprint Assistant Quick Banner */}
@@ -188,6 +193,7 @@ export function BentoGrid() {
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             onToggleStatus={handleToggleTaskStatus}
+            onNewTaskClick={() => setCreateTaskModalOpen(true)}
           />
         </div>
 
@@ -229,6 +235,19 @@ export function BentoGrid() {
           )}
         </div>
       </div>
+
+      <CreateTaskModal
+        isOpen={createTaskModalOpen}
+        onClose={() => setCreateTaskModalOpen(false)}
+        projects={projects}
+        onTaskCreated={() =>
+          refreshTasks({
+            status: statusFilter,
+            priority: priorityFilter,
+            searchQuery: searchQuery.trim(),
+          })
+        }
+      />
     </div>
   );
 }

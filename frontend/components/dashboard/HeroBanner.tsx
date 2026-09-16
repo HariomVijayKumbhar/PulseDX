@@ -59,7 +59,7 @@ export function HeroBanner({ user, onNewTaskClick }: HeroBannerProps) {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium glass-pill hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all text-foreground"
             >
               <Flame className="w-4 h-4 text-amber-500" />
-              <span>Streak: {user?.stats.streakDays || 14} Days</span>
+              <span>Streak: {user?.stats?.streakDays || 14} Days</span>
               <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground" />
             </button>
           </div>

@@ -1,12 +1,22 @@
-﻿'use client';
+'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
-import { Layers, Lock, Mail, User, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { Layers, Lock, Mail, User, ArrowRight, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import dynamic from 'next/dynamic';
+import { AVATAR_3D_OPTIONS } from '@/components/3d/Avatar3DCard';
+
+// Dynamically import 3D card to avoid SSR issues
+const Avatar3DCard = dynamic(() => import('@/components/3d/Avatar3DCard'), {
+  ssr: false,
+  loading: () => (
+    <div className="aspect-square rounded-2xl bg-slate-100/60 dark:bg-slate-800/60 animate-pulse border-2 border-slate-200 dark:border-slate-700" />
+  ),
+});
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -14,12 +24,18 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string>(AVATAR_3D_OPTIONS[0].id);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Build a DiceBear URL from the selected 3D avatar ID so we keep backward-compat
+  const avatarUrl = `https://api.dicebear.com/9.x/notionists/svg?seed=${
+    AVATAR_3D_OPTIONS.find((a) => a.id === selectedAvatarId)?.label ?? 'Nova'
+  }&backgroundColor=d6e4ff`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || !fullName) {
-      toast.error('Please fill in all fields');
+      toast.error('Please fill in all fields and choose an avatar');
       return;
     }
 
@@ -30,7 +46,7 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
-      const { data, error } = await signUp(email, password, fullName);
+      const { data, error } = await signUp(email, password, fullName, avatarUrl);
       if (error) {
         toast.error(error.message || 'Failed to create account');
       } else {
@@ -45,24 +61,30 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="max-w-md w-full glass-panel p-8 rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl relative overflow-hidden"
+        transition={{ duration: 0.35 }}
+        className="max-w-lg w-full glass-panel p-8 rounded-3xl border border-slate-200/60 dark:border-slate-800/80 shadow-2xl relative overflow-hidden"
       >
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
+        {/* Ambient glow */}
+        <div className="absolute -top-28 -right-28 w-56 h-56 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="flex flex-col items-center text-center mb-8">
+        {/* Brand header */}
+        <div className="flex flex-col items-center text-center mb-7">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-4">
             <Layers className="w-6 h-6 text-white" />
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground">Create PulseDX Account</h2>
-          <p className="text-sm text-muted-foreground mt-1">Start collaborating with 3D telemetry & AI sprint insights</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Start collaborating with 3D telemetry &amp; AI sprint insights
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Full Name */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
               Full Name
@@ -80,6 +102,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* Email */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
               Email Address
@@ -97,6 +120,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* Password */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
               Password
@@ -114,6 +138,27 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* ── 3D Avatar Picker ── */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+              Choose Your 3D Avatar
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              {AVATAR_3D_OPTIONS.map((avatar) => (
+                <Avatar3DCard
+                  key={avatar.id}
+                  config={avatar}
+                  selected={selectedAvatarId === avatar.id}
+                  onClick={() => setSelectedAvatarId(avatar.id)}
+                />
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground/70 mt-2 text-center">
+              Hover to animate · Click to select
+            </p>
+          </div>
+
+          {/* Submit */}
           <button
             type="submit"
             disabled={isLoading}

@@ -105,3 +105,58 @@ export async function updateProjectProgress(
     }
   );
 }
+
+/**
+ * Create a new engineering initiative / project — live backend: POST /projects
+ */
+export async function createProject(input: {
+  title: string;
+  description?: string;
+  category?: any;
+  status?: any;
+  ownerId?: string;
+}): Promise<ApiResponse<Project>> {
+  const body = {
+    name: input.title,
+    description: input.description || undefined,
+    ownerId: input.ownerId || '00000000-0000-0000-0000-000000000001',
+    status: input.status && input.status !== 'active' ? input.status : 'active',
+  };
+
+  return apiClient<Project>(
+    '/projects',
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+    () => {
+      const newProj: Project = {
+        id: `proj_${Date.now()}`,
+        key: input.title.slice(0, 4).toUpperCase(),
+        title: input.title,
+        description: input.description || '',
+        category: input.category || 'frontend',
+        status: input.status || 'in_progress',
+        health: 'on_track',
+        progress: 0,
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        totalTasks: 0,
+        completedTasks: 0,
+        openIssues: 0,
+        members: [],
+        tags: [input.category || 'Engineering'],
+        colorAccent: 'from-indigo-500 to-purple-500',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      projectsStore = [newProj, ...projectsStore];
+      return newProj;
+    }
+  ).then((res) => {
+    if (res.success && res.data && isBackendRow(res.data as any)) {
+      return { ...res, data: mapBackendProject(res.data as unknown as BackendProject) };
+    }
+    return res;
+  });
+}
+

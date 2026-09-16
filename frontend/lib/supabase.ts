@@ -5,12 +5,15 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholde
 
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
-export async function signUp(email: string, password: string, fullName?: string) {
+export async function signUp(email: string, password: string, fullName?: string, avatarUrl?: string) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: fullName ? { full_name: fullName, name: fullName } : undefined,
+      data: {
+        ...(fullName ? { full_name: fullName, name: fullName } : {}),
+        ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
+      },
     },
   });
   return { data, error };

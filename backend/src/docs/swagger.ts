@@ -18,7 +18,7 @@ JWT Bearer token auth will be wired in Task 4. Placeholder middleware exists at 
     contact: { name: 'PulseDX Team' },
   },
   servers: [
-    { url: 'http://localhost:5000', description: 'Local Development Server' },
+    { url: 'http://localhost:5050', description: 'Local Development Server' },
   ],
   tags: [
     { name: 'Users', description: 'User account management' },

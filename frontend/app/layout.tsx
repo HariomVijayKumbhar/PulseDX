@@ -1,9 +1,11 @@
-﻿import type { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/context/AuthContext';
+import { AuthGate } from '@/components/AuthGate';
 import { Navbar } from '@/components/layout/Navbar';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { DynamicParticleBackground } from '@/components/3d/DynamicScenes';
 import { Toaster } from 'sonner';
 import { MOCK_USER } from '@/lib/mock-data';
@@ -35,6 +37,7 @@ export default function RootLayout({
         className={`${inter.variable} ${jetbrainsMono.variable} font-sans min-h-screen bg-background text-foreground antialiased selection:bg-indigo-500 selection:text-white transition-colors duration-300 relative overflow-x-hidden`}
       >
         <AuthProvider>
+          <AuthGate>
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"
@@ -47,10 +50,10 @@ export default function RootLayout({
             {/* Primary Navigation Bar */}
             <Navbar user={MOCK_USER} />
 
-            {/* Page Container */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+            {/* Page Container — auth pages get full-bleed, others get max-width */}
+            <PageContainer>
               {children}
-            </main>
+            </PageContainer>
 
             {/* Rich Toast Notifications */}
             <Toaster
@@ -61,6 +64,7 @@ export default function RootLayout({
               }}
             />
           </ThemeProvider>
+          </AuthGate>
         </AuthProvider>
       </body>
     </html>

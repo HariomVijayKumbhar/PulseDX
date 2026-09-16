@@ -8,6 +8,8 @@ import { ProjectCardSkeleton } from '@/components/ui/SkeletonLoaders';
 import { FolderKanban, Plus, Search, Layers, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { CreateProjectModal } from '@/components/ui/CreateProjectModal';
+
 const CATEGORIES: { id: ProjectCategory | 'all'; label: string }[] = [
   { id: 'all', label: 'All Categories' },
   { id: 'frontend', label: 'Frontend' },
@@ -21,6 +23,7 @@ export default function ProjectsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -55,11 +58,7 @@ export default function ProjectsPage() {
         </div>
 
         <button
-          onClick={() =>
-            toast.info('New Project Modal', {
-              description: 'Project provisioning service will connect to Task 2 API.',
-            })
-          }
+          onClick={() => setCreateModalOpen(true)}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25 hover:opacity-90 active:scale-95 transition-all self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
@@ -117,6 +116,12 @@ export default function ProjectsPage() {
           </div>
         )}
       </div>
+
+      <CreateProjectModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onProjectCreated={(newProj) => setProjects((prev) => [newProj, ...prev])}
+      />
     </div>
   );
 }

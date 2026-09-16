@@ -116,15 +116,18 @@ export async function updateTaskStatus(
  * Create a new task — live backend: POST /tasks
  */
 export async function createTask(
-  taskInput: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>
+  taskInput: Partial<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>> & {
+    title: string;
+    projectId: string;
+  }
 ): Promise<ApiResponse<Task>> {
   const body = {
     title: taskInput.title,
     description: taskInput.description || undefined,
     projectId: taskInput.projectId,
     assigneeId: taskInput.assignee?.id || undefined,
-    status: frontendStatusToBackend(taskInput.status),
-    priority: taskInput.priority,
+    status: frontendStatusToBackend((taskInput.status as TaskStatus) || 'todo'),
+    priority: taskInput.priority || 'medium',
     dueDate: taskInput.dueDate || undefined,
   };
   return apiClient<Task>(
@@ -135,8 +138,25 @@ export async function createTask(
     },
     () => {
       const newTask: Task = {
-        ...taskInput,
         id: `task_${Date.now()}`,
+        key: taskInput.key || `TASK-${Math.floor(100 + Math.random() * 900)}`,
+        title: taskInput.title,
+        description: taskInput.description || '',
+        status: taskInput.status || 'todo',
+        priority: taskInput.priority || 'medium',
+        projectId: taskInput.projectId,
+        projectName: taskInput.projectName || 'Default Project',
+        assignee: taskInput.assignee || {
+          id: 'user_1',
+          name: 'Alex Rivera',
+          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80',
+          role: 'Full Stack Engineer',
+        },
+        dueDate: taskInput.dueDate || new Date().toISOString(),
+        estimatedHours: taskInput.estimatedHours || 4,
+        loggedHours: 0,
+        tags: taskInput.tags || ['Sprint'],
+        commentsCount: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

@@ -62,20 +62,40 @@ export function TaskListSection({
     <div className="glass-panel p-6 rounded-3xl space-y-6">
       {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <span>Sprint Tasks</span>
-            <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold">
-              {tasks.length}
-            </span>
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Real-time developer task backlog and active sprint items
-          </p>
+        <div className="flex items-center justify-between w-full md:w-auto gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <span>Sprint Tasks</span>
+              <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold">
+                {tasks.length}
+              </span>
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Real-time developer task backlog and active sprint items
+            </p>
+          </div>
+          {onNewTaskClick && (
+            <button
+              onClick={onNewTaskClick}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-500/20 active:scale-95 transition-all md:hidden"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Task</span>
+            </button>
+          )}
         </div>
 
-        {/* Search Bar & Priority Select */}
+        {/* Search Bar, Priority Select & Create Task */}
         <div className="flex flex-wrap items-center gap-3">
+          {onNewTaskClick && (
+            <button
+              onClick={onNewTaskClick}
+              className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-500/20 active:scale-95 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Task</span>
+            </button>
+          )}
           {/* Search Input */}
           <div className="relative flex-1 sm:w-64">
             <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />

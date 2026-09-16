@@ -7,6 +7,7 @@ import { UserProfile } from '@/types/user';
 import { useAuth } from '@/context/AuthContext';
 import { LogOut, Settings, Shield, User, Zap, Sparkles, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
+import { DEFAULT_AVATAR } from '@/lib/avatars';
 
 interface UserProfileDropdownProps {
   user: UserProfile | null;
@@ -41,7 +42,10 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
 
   const displayName = authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || user?.name || 'Developer';
   const displayEmail = authUser?.email || user?.email || 'developer@acme.io';
-  const avatarUrl = user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80';
+  const avatarUrl =
+    (authUser?.user_metadata?.avatar_url as string | undefined) ||
+    user?.avatarUrl ||
+    DEFAULT_AVATAR;
 
   if (!authUser && !user) {
     return (
