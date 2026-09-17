@@ -1,9 +1,10 @@
-﻿import { Router, Request, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import userRoutes from './userRoutes';
 import projectRoutes from './projectRoutes';
 import taskRoutes from './taskRoutes';
 import statsRoutes from './statsRoutes';
 import aiRoutes from './aiRoutes';
+import authRoutes from './authRoutes';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.get('/health', (_req: Request, res: Response) => {
 });
 
 // Resource routes
+router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/projects', projectRoutes);
 router.use('/tasks', taskRoutes);

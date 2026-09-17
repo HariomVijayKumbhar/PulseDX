@@ -50,8 +50,13 @@ export default function RegisterPage() {
       if (error) {
         toast.error(error.message || 'Failed to create account');
       } else {
-        toast.success('Account created successfully! Check your inbox or proceed to sign in.');
-        router.push('/login');
+        toast.success('Account created successfully! Welcome to PulseDX.');
+        if (data?.session) {
+          router.push('/');
+        } else {
+          router.push('/login');
+        }
+        router.refresh();
       }
     } catch (err: any) {
       toast.error(err.message || 'An unexpected error occurred');
