@@ -18,6 +18,7 @@ import {
   X,
   Layers,
   Sparkles,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,7 +27,7 @@ import { NotificationDropdown } from '@/components/ui/NotificationDropdown';
 import { GlobalSearchModal } from '@/components/ui/GlobalSearchModal';
 
 interface NavbarProps {
-  user: UserProfile | null;
+  user?: UserProfile | null;
 }
 
 const NAV_ITEMS = [
@@ -34,10 +35,11 @@ const NAV_ITEMS = [
   { label: 'Projects', href: '/projects', icon: FolderKanban },
   { label: 'Tasks', href: '/tasks', icon: CheckSquare },
   { label: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { label: 'Teams', href: '/teams', icon: Users },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
 
-export function Navbar({ user }: NavbarProps) {
+export function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -72,11 +74,10 @@ export function Navbar({ user }: NavbarProps) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                        isActive
+                      className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${isActive
                           ? 'text-primary bg-indigo-50 dark:bg-indigo-950/40 font-semibold shadow-sm'
                           : 'text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800/60'
-                      }`}
+                        }`}
                     >
                       <Icon className="w-4 h-4" />
                       {item.label}
@@ -116,8 +117,8 @@ export function Navbar({ user }: NavbarProps) {
               {/* Dark / Light Theme Toggle */}
               <ThemeToggle />
 
-              {/* User Profile */}
-              <UserProfileDropdown user={user} />
+              {/* User Profile — real Supabase session data */}
+              <UserProfileDropdown />
 
               {/* Mobile Hamburger Menu Toggle */}
               <button
@@ -161,11 +162,10 @@ export function Navbar({ user }: NavbarProps) {
                       key={item.href}
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                        isActive
+                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
                           ? 'text-primary bg-indigo-50 dark:bg-indigo-950/60 font-semibold shadow-sm'
                           : 'text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800/50'
-                      }`}
+                        }`}
                     >
                       <Icon className="w-4 h-4" />
                       <span>{item.label}</span>

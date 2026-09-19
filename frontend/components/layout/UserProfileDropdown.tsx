@@ -7,17 +7,25 @@ import { UserProfile } from '@/types/user';
 import { useAuth } from '@/context/AuthContext';
 import { LogOut, Settings, Shield, User, Zap, Sparkles, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
-import { DEFAULT_AVATAR } from '@/lib/avatars';
+import { useRealUserProfile } from '@/lib/hooks/useRealUserProfile';
+import dynamic from 'next/dynamic';
+
+// Snap-style 3D human avatar (client-only to avoid SSR/WebGL issues)
+const Human3DAvatar = dynamic(() => import('@/components/3d/Human3DAvatar'), {
+  ssr: false,
+  loading: () => <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 animate-pulse" />,
+});
 
 interface UserProfileDropdownProps {
-  user: UserProfile | null;
+  user?: UserProfile | null;
 }
 
-export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
+export function UserProfileDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { user: authUser, signOut } = useAuth();
+  const profile = useRealUserProfile();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -40,14 +48,10 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
     }
   };
 
-  const displayName = authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || user?.name || 'Developer';
-  const displayEmail = authUser?.email || user?.email || 'developer@acme.io';
-  const avatarUrl =
-    (authUser?.user_metadata?.avatar_url as string | undefined) ||
-    user?.avatarUrl ||
-    DEFAULT_AVATAR;
+  const displayName = profile.name;
+  const displayEmail = profile.email;
 
-  if (!authUser && !user) {
+  if (!authUser) {
     return (
       <Link
         href="/login"
@@ -67,11 +71,7 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
         aria-label="User profile menu"
       >
         <div className="relative w-8 h-8 rounded-lg overflow-hidden">
-          <img
-            src={avatarUrl}
-            alt={displayName}
-            className="w-full h-full object-cover"
-          />
+          <Human3DAvatar style={profile.avatarStyle} className="w-8 h-8" />
           <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
         </div>
       </button>
@@ -80,34 +80,18 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
         <div className="fixed sm:absolute inset-x-3 sm:inset-x-auto sm:right-0 top-16 sm:top-auto sm:mt-2 w-auto sm:w-72 glass-panel rounded-2xl p-4 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 border border-slate-200/60 dark:border-slate-800/80">
           {/* Header */}
           <div className="flex items-center gap-3 pb-3 border-b border-slate-200/50 dark:border-slate-800/60">
-            <img
-              src={avatarUrl}
-              alt={displayName}
-              className="w-12 h-12 rounded-xl object-cover ring-2 ring-primary/40"
-            />
+            <Human3DAvatar style={profile.avatarStyle} className="w-12 h-12" />
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-semibold text-foreground truncate">{displayName}</h4>
               <p className="text-xs text-muted-foreground truncate">{displayEmail}</p>
               <div className="inline-flex items-center gap-1 mt-1 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
                 <Sparkles className="w-2.5 h-2.5" />
-                {authUser ? 'Supabase Auth' : user?.roleDisplay || 'Developer'}
+                {authUser ? 'Supabase Auth' : 'Developer'}
               </div>
             </div>
           </div>
 
-          {/* Quick Stats */}
-          {user?.stats && (
-            <div className="grid grid-cols-2 gap-2 my-3 p-2 rounded-xl bg-slate-100/70 dark:bg-slate-900/60 text-center">
-              <div>
-                <div className="text-xs text-muted-foreground">Velocity Score</div>
-                <div className="text-sm font-bold text-foreground">{user.stats.velocityScore}%</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Day Streak</div>
-                <div className="text-sm font-bold text-emerald-500">{user.stats.streakDays} days 🔥</div>
-              </div>
-            </div>
-          )}
+          {/* Quick Stats — real backend data only; hidden when unavailable */}
 
           {/* Actions */}
           <div className="space-y-1">

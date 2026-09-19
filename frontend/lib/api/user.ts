@@ -2,16 +2,15 @@ import { UserProfile, ActivityItem } from '@/types/user';
 import { ApiResponse, ProductivitySummary } from '@/types/api';
 import { apiClient } from './client';
 import { mapBackendUser, BackendUser } from './mappers';
-import { MOCK_USER, MOCK_ACTIVITIES, MOCK_PRODUCTIVITY_SUMMARY } from '../mock-data';
-
-let userStore: UserProfile = { ...MOCK_USER };
+import { useAuth } from '@/context/AuthContext';
 
 /**
- * Fetch current user profile.
- * Live backend has no /users/me yet — falls back to first backend user, then to mock.
+ * Fetch current user profile from the live backend, scoped to the signed-in
+ * Supabase user. NO mock fallback — if the backend is unreachable we return
+ * an error response and the UI shows an empty/error state.
  */
 export async function getCurrentUser(): Promise<ApiResponse<UserProfile>> {
-  const res = await apiClient<UserProfile>('/users/me', { method: 'GET' }, () => userStore);
+  const res = await apiClient<UserProfile>('/users/me', { method: 'GET' });
 
   if (res.success && res.data && (res.data as any).id && (res.data as any).name && !('stats' in (res.data as any))) {
     return res; // already frontend-shaped
@@ -29,19 +28,19 @@ export async function getCurrentUser(): Promise<ApiResponse<UserProfile>> {
       };
     }
   } catch {
-    // ignore — keep mock fallback
+    // ignore — return the original (failed) response
   }
   return res;
 }
 
 /**
  * Fetch user activity log.
- * NOTE: backend has no /users/me/activities endpoint yet — serve mock data directly
- * to avoid 404 console noise. Swap to apiClient when the endpoint exists.
+ * NOTE: backend has no /users/me/activities endpoint yet — returns an empty
+ * list (no fake data) until the endpoint exists.
  */
 export async function getUserActivities(): Promise<ApiResponse<ActivityItem[]>> {
   return {
-    data: MOCK_ACTIVITIES,
+    data: [],
     success: true,
     timestamp: new Date().toISOString(),
   };
@@ -49,12 +48,12 @@ export async function getUserActivities(): Promise<ApiResponse<ActivityItem[]>> 
 
 /**
  * Fetch developer productivity metrics.
- * NOTE: backend has no /analytics/productivity-summary endpoint yet — serve mock data
- * directly to avoid 404 console noise. Swap to apiClient when the endpoint exists.
+ * NOTE: backend has no /analytics/productivity-summary endpoint yet — returns
+ * null (no fake data) until the endpoint exists.
  */
 export async function getProductivitySummary(): Promise<ApiResponse<ProductivitySummary>> {
   return {
-    data: MOCK_PRODUCTIVITY_SUMMARY,
+    data: null as unknown as ProductivitySummary,
     success: true,
     timestamp: new Date().toISOString(),
   };

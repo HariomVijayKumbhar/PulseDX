@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Project } from '@/types/project';
 import { HealthBadge, StatusBadge } from '@/components/ui/Badge';
 import { ProgressBar } from '@/components/ui/ProgressBar';
@@ -13,8 +14,12 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
+  const router = useRouter();
   return (
-    <div className="glass-panel glass-panel-hover p-6 rounded-2xl flex flex-col justify-between h-full relative overflow-hidden group">
+    <div
+      onClick={() => router.push(`/projects/${project.id}`)}
+      className="glass-panel glass-panel-hover p-6 rounded-2xl flex flex-col justify-between h-full relative overflow-hidden group cursor-pointer"
+    >
       {/* Top Accent Gradient Line */}
       <div
         className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${project.colorAccent}`}

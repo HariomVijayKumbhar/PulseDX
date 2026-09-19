@@ -19,6 +19,7 @@ services:
     startCommand: npm run start
     healthCheckPath: /api/health
     plan: free
+    autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
@@ -60,6 +61,9 @@ services:
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
+      # Security: only the deployed frontend origin may call the backend
+      - key: ALLOWED_ORIGINS
+        sync: false # set to https://pulsedx-frontend.onrender.com in dashboard
       - key: NEXT_PUBLIC_ENABLE_3D_HERO
         value: "true"
       - key: NEXT_PUBLIC_ENABLE_PARTICLES

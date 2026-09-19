@@ -13,6 +13,11 @@ const router = Router();
 const suggestTasksSchema = z.object({
   goal: z.string().min(3, 'Goal description must be at least 3 characters').max(500),
   projectId: z.string().uuid('Project ID must be a valid UUID').optional(),
+  // Optional user-supplied model config — supports any OpenAI-compatible provider
+  model: z.string().min(1).max(100).optional(),
+  apiKey: z.string().min(8).max(300).optional(),
+  baseUrl: z.string().url().optional(), // e.g. http://localhost:11434/v1 for Ollama
+  provider: z.enum(['openai', 'gemini', 'openai-compatible']).optional(),
 });
 
 const summarizeProjectSchema = z.object({
@@ -35,20 +40,24 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { goal, projectId } = req.body;
-      const apiKey = process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY;
+      const userKey: string | undefined = req.body.apiKey;
+      const model: string = req.body.model || 'gpt-3.5-turbo';
+      const baseUrl: string = req.body.baseUrl || 'https://api.openai.com/v1';
+      const apiKey = userKey || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY;
 
       let generatedTasks: AiSuggestedTask[] = [];
 
-      if (apiKey && process.env.OPENAI_API_KEY) {
+      if (apiKey) {
         try {
-          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          // Works with any OpenAI-compatible endpoint (OpenAI, Ollama, Groq, OpenRouter, LM Studio…)
+          const response = await fetch(`${baseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
-              model: 'gpt-3.5-turbo',
+              model,
               messages: [
                 {
                   role: 'system',
@@ -104,7 +113,7 @@ router.post(
           goal,
           projectId,
           suggestedTasks: generatedTasks,
-          provider: apiKey ? 'OpenAI / Gemini' : 'PulseDX Neural Heuristics Engine',
+          provider: apiKey ? `${model} @ ${baseUrl}` : 'PulseDX Neural Heuristics Engine',
         },
         meta: {
           timestamp: new Date().toISOString(),

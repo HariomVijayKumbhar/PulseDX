@@ -13,7 +13,7 @@ export interface Task {
   priority: TaskPriority;
   projectId: string;
   projectName: string;
-  assignee: ProjectMember;
+  assignee?: ProjectMember;
   reporter?: ProjectMember;
   dueDate: string;
   estimatedHours: number;

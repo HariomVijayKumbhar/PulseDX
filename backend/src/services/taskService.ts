@@ -78,6 +78,11 @@ export class TaskService {
 
     let queryBuilder = supabase.from('tasks').select(selectFields, { count: 'exact' });
 
+    // Multi-tenant: only return tasks belonging to projects owned by this account
+    if (filters?.ownerId) {
+      queryBuilder = queryBuilder.eq('projects.owner_id', filters.ownerId);
+    }
+
     // Combinable filters via chained .eq() calls
     if (filters?.status) {
       queryBuilder = queryBuilder.eq('status', filters.status);
@@ -138,16 +143,17 @@ export class TaskService {
   /**
    * Get single task by ID (with optional joined relation)
    */
-  public async getTaskById(id: string, includeJoined: boolean = true): Promise<Task> {
+  public async getTaskById(id: string, includeJoined: boolean = true, ownerId?: string): Promise<Task> {
     const selectFields = includeJoined
-      ? '*, projects(id, name, status), users(id, name, email, avatar_url)'
+      ? '*, projects!inner(id, name, status, owner_id), users(id, name, email, avatar_url)'
       : '*';
 
-    const { data, error } = await supabase
-      .from('tasks')
-      .select(selectFields)
-      .eq('id', id)
-      .single();
+    let queryBuilder = supabase.from('tasks').select(selectFields).eq('id', id);
+    if (ownerId) {
+      queryBuilder = queryBuilder.eq('projects.owner_id', ownerId);
+    }
+
+    const { data, error } = await queryBuilder.single();
 
     if (error) {
       handleSupabaseError(error, 'Task');
@@ -163,8 +169,8 @@ export class TaskService {
   /**
    * Update an existing task
    */
-  public async updateTask(id: string, input: UpdateTaskInput): Promise<Task> {
-    await this.getTaskById(id, false);
+  public async updateTask(id: string, input: UpdateTaskInput, ownerId?: string): Promise<Task> {
+    await this.getTaskById(id, false, ownerId);
 
     const updatePayload: Record<string, any> = {};
     if (input.title !== undefined) updatePayload.title = input.title;
@@ -192,8 +198,8 @@ export class TaskService {
   /**
    * Delete task by ID
    */
-  public async deleteTask(id: string): Promise<void> {
-    await this.getTaskById(id, false);
+  public async deleteTask(id: string, ownerId?: string): Promise<void> {
+    await this.getTaskById(id, false, ownerId);
 
     const { error } = await supabase.from('tasks').delete().eq('id', id);
 
@@ -205,7 +211,12 @@ export class TaskService {
   /**
    * Aggregate stats query computed at the database level for the Task 1 dashboard
    */
-  public async getStatsOverview(): Promise<StatsOverview> {
+  public async getStatsOverview(ownerId?: string): Promise<StatsOverview> {
+    const scope = ownerId
+      ? supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('projects.owner_id', ownerId)
+      : null;
+    const scopedTasks = () => (scope ? scope : supabase.from('tasks').select('*', { count: 'exact', head: true }));
+
     const [
       totalTasksRes,
       todoTasksRes,
@@ -218,15 +229,17 @@ export class TaskService {
       projectsRes,
       usersRes,
     ] = await Promise.all([
-      supabase.from('tasks').select('*', { count: 'exact', head: true }),
-      supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'todo'),
-      supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'in-progress'),
-      supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'done'),
-      supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('priority', 'low'),
-      supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('priority', 'medium'),
-      supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('priority', 'high'),
-      supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('priority', 'urgent'),
-      supabase.from('projects').select('*', { count: 'exact', head: true }),
+      scopedTasks(),
+      scopedTasks().eq('status', 'todo'),
+      scopedTasks().eq('status', 'in-progress'),
+      scopedTasks().eq('status', 'done'),
+      scopedTasks().eq('priority', 'low'),
+      scopedTasks().eq('priority', 'medium'),
+      scopedTasks().eq('priority', 'high'),
+      scopedTasks().eq('priority', 'urgent'),
+      ownerId
+        ? supabase.from('projects').select('*', { count: 'exact', head: true }).eq('owner_id', ownerId)
+        : supabase.from('projects').select('*', { count: 'exact', head: true }),
       supabase.from('users').select('*', { count: 'exact', head: true }),
     ]);
 

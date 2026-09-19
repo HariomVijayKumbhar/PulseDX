@@ -9,3 +9,17 @@ export const AVATAR_OPTIONS = [
 ] as const;
 
 export const DEFAULT_AVATAR = AVATAR_OPTIONS[0].url;
+
+/**
+ * Resolve an avatar URL / seed into a 3D avatar config (Avatar3DCard's options).
+ * The stored avatar is a DiceBear URL containing the seed name, which matches
+ * the 3D persona labels (Nova, Orbit, ...). Falls back to 'Nova'.
+ */
+export function resolve3DAvatar(avatarUrl?: string | null) {
+  const { AVATAR_3D_OPTIONS } = require('@/components/3d/Avatar3DCard') as typeof import('@/components/3d/Avatar3DCard');
+  if (!avatarUrl) return AVATAR_3D_OPTIONS[0];
+  const match = AVATAR_3D_OPTIONS.find((a) =>
+    avatarUrl.toLowerCase().includes(`seed=${a.label.toLowerCase()}`)
+  );
+  return match ?? AVATAR_3D_OPTIONS[0];
+}

@@ -20,9 +20,12 @@ export class ProjectService {
   }
 
   /**
-   * Create a new project in Supabase
+   * Create a new project in Supabase — always owned by the authenticated user
    */
-  public async createProject(input: CreateProjectInput): Promise<Project> {
+  public async createProject(input: CreateProjectInput & { ownerId?: string }): Promise<Project> {
+    if (!input.ownerId) {
+      throw new BadRequestError('An authenticated account is required to create a project');
+    }
     const { data, error } = await supabase
       .from('projects')
       .insert({
@@ -46,6 +49,11 @@ export class ProjectService {
    */
   public async getProjects(query?: PaginationQuery): Promise<PaginatedResult<Project>> {
     let queryBuilder = supabase.from('projects').select('*', { count: 'exact' });
+
+    // Multi-tenant: only return projects owned by this account
+    if (query?.ownerId) {
+      queryBuilder = queryBuilder.eq('owner_id', query.ownerId);
+    }
 
     // Search by project name or description
     if (query?.search) {
@@ -91,14 +99,15 @@ export class ProjectService {
   }
 
   /**
-   * Get single project by ID
+   * Get single project by ID — optional owner scoping for account isolation
    */
-  public async getProjectById(id: string): Promise<Project> {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', id)
-      .single();
+  public async getProjectById(id: string, ownerId?: string): Promise<Project> {
+    let queryBuilder = supabase.from('projects').select('*').eq('id', id);
+    if (ownerId) {
+      queryBuilder = queryBuilder.eq('owner_id', ownerId);
+    }
+
+    const { data, error } = await queryBuilder.single();
 
     if (error) {
       handleSupabaseError(error, 'Project');
@@ -114,8 +123,8 @@ export class ProjectService {
   /**
    * Update an existing project
    */
-  public async updateProject(id: string, input: UpdateProjectInput): Promise<Project> {
-    await this.getProjectById(id);
+  public async updateProject(id: string, input: UpdateProjectInput, ownerId?: string): Promise<Project> {
+    await this.getProjectById(id, ownerId);
 
     const updatePayload: Record<string, any> = {};
     if (input.name !== undefined) updatePayload.name = input.name;

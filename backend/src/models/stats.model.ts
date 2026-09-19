@@ -5,6 +5,8 @@
   assigneeId?: string;
   search?: string;
   includeJoined?: boolean;
+  /** Multi-tenant: restrict results to projects owned by this user */
+  ownerId?: string;
   page?: number;
   limit?: number;
   sortBy?: string;

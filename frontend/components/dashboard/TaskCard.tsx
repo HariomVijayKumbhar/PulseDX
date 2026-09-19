@@ -94,12 +94,21 @@ export function TaskCard({ task, onToggleStatus }: TaskCardProps) {
               </div>
 
               {/* Assignee Avatar */}
-              <img
-                src={task.assignee.avatarUrl}
-                alt={task.assignee.name}
-                title={`Assigned to ${task.assignee.name}`}
-                className="w-6 h-6 rounded-full object-cover ring-1 ring-primary/40"
-              />
+              {task.assignee ? (
+                <img
+                  src={task.assignee.avatarUrl}
+                  alt={task.assignee.name}
+                  title={`Assigned to ${task.assignee.name}`}
+                  className="w-6 h-6 rounded-full object-cover ring-1 ring-primary/40"
+                />
+              ) : (
+                <span
+                  title="Unassigned"
+                  className="w-6 h-6 rounded-full ring-1 ring-primary/40 bg-slate-200 dark:bg-slate-800 inline-flex items-center justify-center text-[9px] font-bold text-muted-foreground"
+                >
+                  ?
+                </span>
+              )}
             </div>
           </div>
         </div>

@@ -11,7 +11,7 @@ export class TaskController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const task = await taskService.createTask(req.body);
+      const task = await taskService.createTask({ ...req.body, ownerId: req.user?.id });
       res.status(201).json({
         data: task,
         meta: {
@@ -35,6 +35,7 @@ export class TaskController {
         projectId: req.query.projectId as string | undefined,
         assigneeId: req.query.assigneeId as string | undefined,
         search: req.query.search as string | undefined,
+        ownerId: req.user?.id,
         includeJoined: req.query.includeJoined === 'true',
         page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
         limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
@@ -63,7 +64,7 @@ export class TaskController {
   ): Promise<void> {
     try {
       const includeJoined = req.query.includeJoined !== 'false';
-      const task = await taskService.getTaskById(req.params.id, includeJoined);
+      const task = await taskService.getTaskById(req.params.id, includeJoined, req.user?.id);
       res.status(200).json({
         data: task,
         meta: {
@@ -81,7 +82,7 @@ export class TaskController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const updated = await taskService.updateTask(req.params.id, req.body);
+      const updated = await taskService.updateTask(req.params.id, req.body, req.user?.id);
       res.status(200).json({
         data: updated,
         meta: {
@@ -99,7 +100,7 @@ export class TaskController {
     next: NextFunction
   ): Promise<void> {
     try {
-      await taskService.deleteTask(req.params.id);
+      await taskService.deleteTask(req.params.id, req.user?.id);
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -107,12 +108,12 @@ export class TaskController {
   }
 
   public async getStatsOverview(
-    _req: Request,
+    req: Request,
     res: Response<ApiSuccessResponse<StatsOverview>>,
     next: NextFunction
   ): Promise<void> {
     try {
-      const stats = await taskService.getStatsOverview();
+      const stats = await taskService.getStatsOverview(req.user?.id);
       res.status(200).json({
         data: stats,
         meta: {

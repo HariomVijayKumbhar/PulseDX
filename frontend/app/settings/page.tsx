@@ -1,14 +1,33 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MOCK_USER } from '@/lib/mock-data';
+import { useAuth } from '@/context/AuthContext';
+import { useRealUserProfile, saveAvatarChoice } from '@/lib/hooks/useRealUserProfile';
+import { AVATAR_3D_OPTIONS as HUMAN_AVATAR_OPTIONS } from '@/components/3d/Human3DAvatar';
+import dynamic from 'next/dynamic';
+
+const Human3DAvatar = dynamic(() => import('@/components/3d/Human3DAvatar'), {
+  ssr: false,
+  loading: () => <div className="w-14 h-14 rounded-full bg-slate-200 dark:bg-slate-800 animate-pulse" />,
+});
 import { Settings, User, Shield, Bell, Key, Sparkles, Save, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function SettingsPage() {
-  const [apiKey, setApiKey] = useState('pk_live_51M0d98acme982348a');
-  const [apiUrl, setApiUrl] = useState(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1');
+  const { user } = useAuth();
+  const profile = useRealUserProfile();
+  const [avatarStyleId, setAvatarStyleId] = useState(profile.avatarStyle.id);
+  const [apiKey, setApiKey] = useState('');
+  const [apiUrl, setApiUrl] = useState(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api');
   const [saved, setSaved] = useState(false);
+
+  const selectedStyle = HUMAN_AVATAR_OPTIONS.find((a) => a.id === avatarStyleId) || profile.avatarStyle;
+
+  const handleAvatarPick = (id: string) => {
+    setAvatarStyleId(id);
+    if (user?.id) saveAvatarChoice(user.id, id);
+    toast.success('3D persona updated!');
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,17 +57,37 @@ export default function SettingsPage() {
         </h3>
 
         <div className="flex items-center gap-4">
-          <img
-            src={MOCK_USER.avatarUrl}
-            alt={MOCK_USER.name}
-            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover ring-2 ring-primary/40 shrink-0"
-          />
+          <Human3DAvatar style={selectedStyle} className="w-20 h-20 sm:w-24 sm:h-24" />
           <div className="min-w-0">
-            <h4 className="text-base font-bold text-foreground truncate">{MOCK_USER.name}</h4>
-            <p className="text-xs text-muted-foreground truncate">{MOCK_USER.email}</p>
+            <h4 className="text-base font-bold text-foreground truncate">{profile.name}</h4>
+            <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
             <span className="inline-block mt-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-              {MOCK_USER.roleDisplay} &bull; {MOCK_USER.team}
+              @{profile.username}
             </span>
+          </div>
+        </div>
+
+        {/* 3D Human Persona Picker */}
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+            Your 3D Persona
+          </label>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {HUMAN_AVATAR_OPTIONS.map((style) => (
+              <button
+                key={style.id}
+                type="button"
+                onClick={() => handleAvatarPick(style.id)}
+                className={`rounded-xl overflow-hidden border-2 transition-all ${
+                  avatarStyleId === style.id
+                    ? 'border-indigo-500 ring-2 ring-indigo-500/40'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-400'
+                }`}
+              >
+                <Human3DAvatar style={style} className="w-full h-16" />
+                <span className="block text-[10px] font-semibold pb-1 text-muted-foreground">{style.label}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>

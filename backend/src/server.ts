@@ -1,6 +1,10 @@
 import app from './app';
+import { connectMongo, disconnectMongo } from './lib/mongoClient';
 
 const PORT = parseInt(process.env.PORT ?? '5000', 10);
+
+// Connect to MongoDB on startup (non-fatal — Supabase remains primary if Mongo is absent)
+connectMongo().catch(() => undefined);
 
 const server = app.listen(PORT, () => {
   console.log(`\n🚀  PulseDX API running`);
@@ -13,7 +17,8 @@ const server = app.listen(PORT, () => {
 // Graceful shutdown
 const shutdown = (signal: string) => {
   console.log(`\n${signal} received — shutting down gracefully…`);
-  server.close(() => {
+  server.close(async () => {
+    await disconnectMongo();
     console.log('HTTP server closed.');
     process.exit(0);
   });

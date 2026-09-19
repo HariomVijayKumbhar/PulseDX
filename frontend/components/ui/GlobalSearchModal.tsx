@@ -5,24 +5,42 @@ import { useRouter } from 'next/navigation';
 import { Search, X, CheckSquare, FolderKanban, ArrowRight, CornerDownLeft } from 'lucide-react';
 import { Task } from '@/types/task';
 import { Project } from '@/types/project';
-import { MOCK_TASKS, MOCK_PROJECTS } from '@/lib/mock-data';
+import { getTasks } from '@/lib/api/tasks';
+import { getProjects } from '@/lib/api/projects';
 
 interface GlobalSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tasks?: Task[];
-  projects?: Project[];
 }
 
 export function GlobalSearchModal({
   isOpen,
   onClose,
-  tasks = MOCK_TASKS,
-  projects = MOCK_PROJECTS,
 }: GlobalSearchModalProps) {
+  // Live data from the backend — no mock seed
+  const [tasks, setTasks] = React.useState<Task[]>([]);
+  const [projects, setProjects] = React.useState<Project[]>([]);
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  // Load real data whenever the modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    let alive = true;
+    Promise.all([getTasks(), getProjects()])
+      .then(([t, p]) => {
+        if (!alive) return;
+        setTasks(Array.isArray(t.data) ? t.data : []);
+        setProjects(Array.isArray(p.data) ? p.data : []);
+      })
+      .catch(() => {
+        // backend unreachable — leave lists empty, search simply shows no results
+      });
+    return () => {
+      alive = false;
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {

@@ -10,7 +10,7 @@ export class ProjectController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const project = await projectService.createProject(req.body);
+      const project = await projectService.createProject({ ...req.body, ownerId: req.user?.id });
       res.status(201).json({
         data: project,
         meta: {
@@ -30,6 +30,7 @@ export class ProjectController {
     try {
       const query = {
         search: req.query.search as string | undefined,
+        ownerId: req.user?.id,
         page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
         limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
         sortBy: req.query.sortBy as string | undefined,
@@ -56,7 +57,7 @@ export class ProjectController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const project = await projectService.getProjectById(req.params.id);
+      const project = await projectService.getProjectById(req.params.id, req.user?.id);
       res.status(200).json({
         data: project,
         meta: {
@@ -74,7 +75,7 @@ export class ProjectController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const updated = await projectService.updateProject(req.params.id, req.body);
+      const updated = await projectService.updateProject(req.params.id, req.body, req.user?.id);
       res.status(200).json({
         data: updated,
         meta: {

@@ -2,10 +2,10 @@ import { Project, ProjectStatus } from '@/types/project';
 import { ApiResponse, ProjectFilterOptions } from '@/types/api';
 import { apiClient } from './client';
 import { mapBackendProject, BackendProject } from './mappers';
-import { MOCK_PROJECTS } from '../mock-data';
 
-// Local memory store during session for mock fallback
-let projectsStore: Project[] = [...MOCK_PROJECTS];
+// Session-local projects created by the user while backend is unreachable.
+// Starts EMPTY — no seeded fake projects.
+let projectsStore: Project[] = [];
 
 /** Detect whether a row is a raw backend project (has name/owner_id, no title) */
 function isBackendRow(row: any): boolean {

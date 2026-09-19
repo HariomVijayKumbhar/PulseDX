@@ -4,11 +4,9 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/context/AuthContext';
 import { AuthGate } from '@/components/AuthGate';
-import { Navbar } from '@/components/layout/Navbar';
+import { AppChrome } from '@/components/layout/AppChrome';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { DynamicParticleBackground } from '@/components/3d/DynamicScenes';
 import { Toaster } from 'sonner';
-import { MOCK_USER } from '@/lib/mock-data';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -55,16 +53,13 @@ export default function RootLayout({
             enableSystem={false}
             disableTransitionOnChange={false}
           >
-            {/* Subtle Ambient 3D Particle Field */}
-            <DynamicParticleBackground />
-
-            {/* Primary Navigation Bar */}
-            <Navbar user={MOCK_USER} />
-
-            {/* Page Container — auth pages get full-bleed, others get max-width */}
-            <PageContainer>
-              {children}
-            </PageContainer>
+            {/* Navbar + particle field — hidden on auth routes (/login, /register) */}
+            <AppChrome>
+              {/* Page Container — auth pages get full-bleed, others get max-width */}
+              <PageContainer>
+                {children}
+              </PageContainer>
+            </AppChrome>
 
             {/* Rich Toast Notifications */}
             <Toaster

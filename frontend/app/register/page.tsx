@@ -8,10 +8,10 @@ import { toast } from 'sonner';
 import { Layers, Lock, Mail, User, ArrowRight, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
-import { AVATAR_3D_OPTIONS } from '@/components/3d/Avatar3DCard';
+import { AVATAR_3D_OPTIONS } from '@/components/3d/Human3DAvatar';
 
 // Dynamically import 3D card to avoid SSR issues
-const Avatar3DCard = dynamic(() => import('@/components/3d/Avatar3DCard'), {
+const Avatar3DCard = dynamic(() => import('@/components/3d/Human3DAvatar').then((m) => ({ default: m.HumanAvatarPickerCard })), {
   ssr: false,
   loading: () => (
     <div className="aspect-square rounded-2xl bg-slate-100/60 dark:bg-slate-800/60 animate-pulse border-2 border-slate-200 dark:border-slate-700" />
@@ -27,10 +27,8 @@ export default function RegisterPage() {
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>(AVATAR_3D_OPTIONS[0].id);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Build a DiceBear URL from the selected 3D avatar ID so we keep backward-compat
-  const avatarUrl = `https://api.dicebear.com/9.x/notionists/svg?seed=${
-    AVATAR_3D_OPTIONS.find((a) => a.id === selectedAvatarId)?.label ?? 'Nova'
-  }&backgroundColor=d6e4ff`;
+  // Store the chosen 3D persona id in the Supabase user metadata
+  const avatarUrl = `human3d://${AVATAR_3D_OPTIONS.find((a) => a.id === selectedAvatarId)?.id ?? 'ace'}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,7 +150,7 @@ export default function RegisterPage() {
               {AVATAR_3D_OPTIONS.map((avatar) => (
                 <Avatar3DCard
                   key={avatar.id}
-                  config={avatar}
+                  style={avatar}
                   selected={selectedAvatarId === avatar.id}
                   onClick={() => setSelectedAvatarId(avatar.id)}
                 />

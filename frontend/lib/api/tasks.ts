@@ -2,10 +2,10 @@ import { Task, TaskStatus } from '@/types/task';
 import { ApiResponse, TaskFilterOptions } from '@/types/api';
 import { apiClient } from './client';
 import { mapBackendTask, frontendStatusToBackend, BackendTask } from './mappers';
-import { MOCK_TASKS } from '../mock-data';
 
-// Session state for mock fallback (offline / backend down)
-let tasksStore: Task[] = [...MOCK_TASKS];
+// Session-local tasks created while the backend is unreachable (real user
+// actions, not seeded fake data). Starts empty.
+let tasksStore: Task[] = [];
 
 function mockFilter(filters?: TaskFilterOptions): Task[] {
   let filtered = [...tasksStore];
@@ -146,12 +146,7 @@ export async function createTask(
         priority: taskInput.priority || 'medium',
         projectId: taskInput.projectId,
         projectName: taskInput.projectName || 'Default Project',
-        assignee: taskInput.assignee || {
-          id: 'user_1',
-          name: 'Alex Rivera',
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80',
-          role: 'Full Stack Engineer',
-        },
+        ...(taskInput.assignee ? { assignee: taskInput.assignee } : {}),
         dueDate: taskInput.dueDate || new Date().toISOString(),
         estimatedHours: taskInput.estimatedHours || 4,
         loggedHours: 0,

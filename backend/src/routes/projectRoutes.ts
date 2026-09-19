@@ -2,8 +2,12 @@
 import { projectController } from '../controllers/projectController';
 import { validate, createProjectSchema, updateProjectSchema, idParamSchema } from '../middleware/validate';
 import { writeLimiter } from '../middleware/rateLimiter';
+import { authenticate, requireAuth } from '../middleware/auth';
 
 const router = Router();
+
+// All project routes are account-scoped — authentication is required
+router.use(authenticate, requireAuth);
 
 // POST /api/projects - Create a new project
 router.post(

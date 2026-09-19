@@ -2,8 +2,12 @@ import { Router } from 'express';
 import { taskController } from '../controllers/taskController';
 import { validate, createTaskSchema, updateTaskSchema, idParamSchema, taskFilterQuerySchema } from '../middleware/validate';
 import { writeLimiter } from '../middleware/rateLimiter';
+import { authenticate, requireAuth } from '../middleware/auth';
 
 const router = Router();
+
+// All task routes are account-scoped — authentication is required
+router.use(authenticate, requireAuth);
 
 // POST /api/tasks - Create a new task
 router.post(
