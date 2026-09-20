@@ -1,7 +1,8 @@
-﻿import { supabase } from '../supabase';
+import { supabase } from '../supabase';
 import { ApiResponse } from '@/types/api';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api';
+const rawBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api').replace(/\/+$/, '');
+const API_BASE_URL = rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`;
 
 /**
  * Standard API Client Wrapper

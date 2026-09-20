@@ -6,7 +6,8 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholde
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function signUp(email: string, password: string, fullName?: string, avatarUrl?: string) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api';
+  const rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api').replace(/\/+$/, '');
+  const apiUrl = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
 
   try {
     // 1. Call backend registration endpoint to create auto-confirmed user
@@ -21,30 +22,33 @@ export async function signUp(email: string, password: string, fullName?: string,
       }),
     });
 
-    const json = await res.json();
-
-    if (!res.ok) {
-      const errMsg = json?.error?.message || 'Registration failed';
-      return { data: null, error: new Error(errMsg) };
+    if (res.ok) {
+      // Automatically sign in with credentials now that email is confirmed
+      const loginRes = await signIn(email, password);
+      return loginRes;
     }
 
-    // 2. Automatically sign in with credentials now that email is confirmed
-    const loginRes = await signIn(email, password);
-    return loginRes;
-  } catch (backendErr) {
-    // Fallback directly to Supabase client if backend endpoint is unavailable
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          ...(fullName ? { full_name: fullName, name: fullName } : {}),
-          ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
-        },
-      },
-    });
-    return { data, error };
+    // If 404 or backend unavailable, fall through to direct Supabase sign up
+    const json = await res.json().catch(() => null);
+    if (res.status !== 404 && json?.error?.message) {
+      return { data: null, error: new Error(json.error.message) };
+    }
+  } catch {
+    // Fallback directly to Supabase client if backend is unreachable or throws
   }
+
+  // Direct Supabase fallback
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        ...(fullName ? { full_name: fullName, name: fullName } : {}),
+        ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
+      },
+    },
+  });
+  return { data, error };
 }
 
 export async function signIn(email: string, password: string) {
