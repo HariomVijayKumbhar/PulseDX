@@ -35,4 +35,12 @@ router.patch(
   projectController.updateProject
 );
 
+// DELETE /api/projects/:id - Delete a project (cascades to its tasks)
+router.delete(
+  '/:id',
+  writeLimiter,
+  validate({ params: idParamSchema }),
+  projectController.deleteProject
+);
+
 export default router;

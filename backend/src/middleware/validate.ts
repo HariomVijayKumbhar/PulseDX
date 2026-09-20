@@ -74,7 +74,8 @@ export const createProjectSchema = z.object({
     .max(100, 'Project name must not exceed 100 characters')
     .trim(),
   description: z.string().max(500, 'Description must not exceed 500 characters').optional(),
-  ownerId: z.string({ required_error: 'ownerId is required' }).min(1, 'ownerId cannot be empty').trim(),
+  // ownerId is injected server-side from the authenticated user (projectController) — optional in body
+  ownerId: z.string().min(1).trim().optional(),
   status: z
     .enum(['planning', 'active', 'in_progress', 'on_hold', 'completed'])
     .optional()

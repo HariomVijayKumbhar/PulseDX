@@ -19,6 +19,10 @@ backend/dist/
 *.env.local
 !*.env.example
 !*.env.local.example
+!*.env.render.example
+!*.env.vercel.example
+!*.env.deploy.example
+!.env.deploy.example
 
 # OS / Editor
 .DS_Store

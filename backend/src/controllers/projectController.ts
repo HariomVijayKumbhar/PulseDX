@@ -86,6 +86,19 @@ export class ProjectController {
       next(error);
     }
   }
+
+  public async deleteProject(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      await projectService.deleteProject(req.params.id, req.user?.id);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const projectController = new ProjectController();

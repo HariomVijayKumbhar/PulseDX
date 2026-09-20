@@ -73,8 +73,8 @@ export class TaskService {
   public async getTasks(filters?: TaskFilterQuery): Promise<PaginatedResult<Task>> {
     // Select with joined relations if requested
     const selectFields = filters?.includeJoined
-      ? '*, projects(id, name, status), users(id, name, email, avatar_url)'
-      : '*';
+      ? '*, projects!inner(id, name, status, owner_id), users(id, name, email, avatar_url)'
+      : '*, projects!inner(id, name, status, owner_id)';
 
     let queryBuilder = supabase.from('tasks').select(selectFields, { count: 'exact' });
 
@@ -144,9 +144,11 @@ export class TaskService {
    * Get single task by ID (with optional joined relation)
    */
   public async getTaskById(id: string, includeJoined: boolean = true, ownerId?: string): Promise<Task> {
+    // Always embed projects!inner so the multi-tenant owner filter below is valid.
+    // (Filtering on projects.owner_id without the embed raises PostgREST error PGRST108.)
     const selectFields = includeJoined
       ? '*, projects!inner(id, name, status, owner_id), users(id, name, email, avatar_url)'
-      : '*';
+      : '*, projects!inner(id, name, status, owner_id)';
 
     let queryBuilder = supabase.from('tasks').select(selectFields).eq('id', id);
     if (ownerId) {
@@ -213,9 +215,18 @@ export class TaskService {
    */
   public async getStatsOverview(ownerId?: string): Promise<StatsOverview> {
     const scope = ownerId
-      ? supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('projects.owner_id', ownerId)
+      ? supabase
+          .from('tasks')
+          .select('*, projects!inner(owner_id)', { count: 'exact', head: true })
+          .eq('projects.owner_id', ownerId)
       : null;
-    const scopedTasks = () => (scope ? scope : supabase.from('tasks').select('*', { count: 'exact', head: true }));
+    const scopedTasks = () =>
+      ownerId
+        ? supabase
+            .from('tasks')
+            .select('*, projects!inner(owner_id)', { count: 'exact', head: true })
+            .eq('projects.owner_id', ownerId)
+        : supabase.from('tasks').select('*', { count: 'exact', head: true });
 
     const [
       totalTasksRes,

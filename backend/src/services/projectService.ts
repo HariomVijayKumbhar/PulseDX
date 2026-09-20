@@ -144,6 +144,19 @@ export class ProjectService {
 
     return this.toModel(data);
   }
+
+  /**
+   * Delete a project by ID (tasks cascade via FK ON DELETE CASCADE)
+   */
+  public async deleteProject(id: string, ownerId?: string): Promise<void> {
+    await this.getProjectById(id, ownerId);
+
+    const { error } = await supabase.from('projects').delete().eq('id', id);
+
+    if (error) {
+      handleSupabaseError(error, 'Project');
+    }
+  }
 }
 
 export const projectService = new ProjectService();
