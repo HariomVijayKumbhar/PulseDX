@@ -2,7 +2,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { validate } from '../middleware/validate';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, authenticate } from '../middleware/auth';
 import { writeLimiter } from '../middleware/rateLimiter';
 import { taskService } from '../services/taskService';
 import { projectService } from '../services/projectService';
@@ -127,6 +127,9 @@ router.post(
 
 router.post(
   '/summarize-project',
+  authenticate,
+  requireAuth,
+  writeLimiter,
   validate({ body: summarizeProjectSchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
