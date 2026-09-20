@@ -33,6 +33,8 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: MONGODB_URI
+        sync: false # mongodb+srv://user:pass@cluster.mongodb.net/pulsedx
       - key: ALLOWED_ORIGINS
         # filled in after frontend URL is known; set in dashboard
         sync: false
