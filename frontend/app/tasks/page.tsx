@@ -1,12 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useDashboardData } from '@/lib/hooks/useDashboardData';
 import { TaskListSection } from '@/components/dashboard/TaskListSection';
 import { CreateTaskModal } from '@/components/ui/CreateTaskModal';
 import { CheckSquare } from 'lucide-react';
 
 export default function TasksPage() {
+  return (
+    <Suspense fallback={null}>
+      <TasksPageContent />
+    </Suspense>
+  );
+}
+
+function TasksPageContent() {
+  const searchParams = useSearchParams();
   const {
     projects,
     tasks,
@@ -20,7 +30,7 @@ export default function TasksPage() {
     setSearchQuery,
     handleToggleTaskStatus,
     refreshTasks,
-  } = useDashboardData();
+  } = useDashboardData(searchParams.get('search') ?? undefined);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
 

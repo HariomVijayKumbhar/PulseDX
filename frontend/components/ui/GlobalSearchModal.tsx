@@ -91,15 +91,27 @@ export function GlobalSearchModal({
       )
     : projects.slice(0, 3);
 
-  const handleSelectTask = (taskId: string) => {
-    router.push('/tasks');
+  const handleSelectTask = (taskId: string, taskKey: string) => {
+    // Carry the matched task's key/text to the tasks page so it opens pre-filtered
+    router.push(`/tasks?search=${encodeURIComponent(taskKey || query)}`);
     onClose();
   };
 
   const handleSelectProject = (projectId: string) => {
-    router.push('/projects');
+    // Open the project's detail page directly
+    router.push(`/projects/${projectId}`);
     onClose();
   };
+
+  const handleSelectAnalytics = () => {
+    router.push('/analytics');
+    onClose();
+  };
+
+  // Show the analytics/analysis page as a match when the query hints at it
+  const showAnalytics =
+    !trimmed ||
+    /analy|analysis|report|insight|statistic|progress|dashboard/.test(trimmed);
 
   return (
     <div
@@ -147,7 +159,7 @@ export function GlobalSearchModal({
                 {filteredTasks.map((t) => (
                   <div
                     key={t.id}
-                    onClick={() => handleSelectTask(t.id)}
+                    onClick={() => handleSelectTask(t.id, t.key)}
                     className="p-2.5 rounded-xl hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 cursor-pointer flex items-center justify-between gap-3 group transition-colors"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -204,7 +216,31 @@ export function GlobalSearchModal({
             </div>
           )}
 
-          {filteredTasks.length === 0 && filteredProjects.length === 0 && (
+          {/* Project Analysis Section */}
+          {showAnalytics && (
+            <div>
+              <h4 className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                <ArrowRight className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Project Analysis</span>
+              </h4>
+              <div
+                onClick={handleSelectAnalytics}
+                className="p-2.5 rounded-xl hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30 cursor-pointer flex items-center justify-between gap-3 group transition-colors"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-semibold">
+                    VIEW
+                  </span>
+                  <span className="text-xs font-semibold text-foreground group-hover:text-emerald-500 transition-colors">
+                    Open project analysis &amp; statistics
+                  </span>
+                </div>
+                <CornerDownLeft className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            </div>
+          )}
+
+          {filteredTasks.length === 0 && filteredProjects.length === 0 && !showAnalytics && (
             <div className="py-8 text-center text-xs text-muted-foreground">
               No matching tasks or initiatives found for &quot;{query}&quot;.
             </div>

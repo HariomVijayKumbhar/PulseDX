@@ -10,7 +10,7 @@ import { getTasks, updateTaskStatus as apiUpdateTaskStatus } from '@/lib/api/tas
 import { getCurrentUser, getUserActivities, getProductivitySummary } from '@/lib/api/user';
 import { toast } from 'sonner';
 
-export function useDashboardData() {
+export function useDashboardData(initialSearchQuery?: string) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -24,7 +24,7 @@ export function useDashboardData() {
   // Filters state
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'all'>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>(initialSearchQuery ?? '');
 
   const loadAllData = useCallback(async () => {
     setIsLoading(true);

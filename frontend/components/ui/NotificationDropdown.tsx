@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Check, Trash2, GitPullRequest, ShieldAlert, Zap, CheckCircle2 } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { Bell, Check, Trash2, FolderKanban, ListTodo, AlertTriangle, Loader2, CheckCircle2, Clock, CalendarClock } from 'lucide-react';
 import { toast } from 'sonner';
+import { getProjects } from '@/lib/api/projects';
+import { getTasks } from '@/lib/api/tasks';
 
 export interface NotificationItem {
   id: string;
@@ -10,50 +13,107 @@ export interface NotificationItem {
   description: string;
   time: string;
   unread: boolean;
-  type: 'ci' | 'task' | 'alert' | 'system';
+  type: 'task' | 'project' | 'alert';
+  href: string;
 }
 
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: '1',
-    title: 'PR #342 Passed CI Checks',
-    description: 'OAuth2 biometric fallback module ready for production deploy.',
-    time: '5m ago',
-    unread: true,
-    type: 'ci',
-  },
-  {
-    id: '2',
-    title: 'New Sprint Task Assigned',
-    description: 'Alex assigned you to "Implement rate limiting middleware".',
-    time: '25m ago',
-    unread: true,
-    type: 'task',
-  },
-  {
-    id: '3',
-    title: 'Telemetry Alert Resolved',
-    description: 'Sub-40ms latency verified across all REST endpoints.',
-    time: '1h ago',
-    unread: false,
-    type: 'alert',
-  },
-  {
-    id: '4',
-    title: 'PulseDX 3D Engine Updated',
-    description: 'Three.js mesh shaders optimized for mobile GPU rendering.',
-    time: '3h ago',
-    unread: false,
-    type: 'system',
-  },
-];
+function timeAgo(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
+/**
+ * Builds real notifications from the user's projects and tasks.
+ * - Overdue tasks → alert
+ * - Tasks due soon (≤2 days) or recently assigned/created → task
+ * - Recently created/updated projects → project
+ */
+function buildNotifications(projects: any[], tasks: any[]): NotificationItem[] {
+  const items: NotificationItem[] = [];
+  const now = Date.now();
+  const twoDays = 2 * 24 * 60 * 60 * 1000;
+
+  for (const t of tasks) {
+    const due = t.dueDate ? new Date(t.dueDate).getTime() : null;
+    const isOverdue = due !== null && due < now && t.status !== 'done';
+    const dueSoon = due !== null && due >= now && due - now <= twoDays && t.status !== 'done';
+    if (isOverdue || dueSoon) {
+      items.push({
+        id: `task-${t.id}`,
+        title: isOverdue ? `Task overdue: ${t.title}` : `Task due soon: ${t.title}`,
+        description: isOverdue
+          ? `This ${t.priority ?? 'medium'} priority task passed its due date.`
+          : `Due ${timeAgo(t.dueDate).replace(' ago', ' from now')} · ${t.priority ?? 'medium'} priority.`,
+        time: t.dueDate ? timeAgo(t.dueDate) : '',
+        unread: isOverdue,
+        type: isOverdue ? 'alert' : 'task',
+        href: `/tasks?search=${encodeURIComponent(t.title)}`,
+      });
+    }
+  }
+
+  for (const p of projects) {
+    const updated = p.updatedAt ?? p.createdAt;
+    const recent = updated ? Date.now() - new Date(updated).getTime() < 7 * 24 * 60 * 60 * 1000 : false;
+    if (recent) {
+      items.push({
+        id: `project-${p.id}`,
+        title: `Project updated: ${p.name}`,
+        description: p.description || 'Project activity in the last 7 days.',
+        time: timeAgo(updated),
+        unread: false,
+        type: 'project',
+        href: `/projects/${p.id}`,
+      });
+    }
+  }
+
+  return items.slice(0, 15);
+}
 
 export function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  // Fetch real data from the user's projects & tasks when opened
+  const fetchNotifications = async () => {
+    setLoading(true);
+    try {
+      const [projects, tasks] = await Promise.all([getProjects(), getTasks()]);
+      setNotifications(buildNotifications(projects ?? [], tasks ?? []));
+      setLoaded(true);
+    } catch {
+      if (!loaded) toast.error('Could not load notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleOpen = () => {
+    const next = !isOpen;
+    setIsOpen(next);
+    if (next) fetchNotifications();
+  };
 
   const unreadCount = notifications.filter((n) => n.unread).length;
+
+  const openNotification = (item: NotificationItem) => {
+    setIsOpen(false);
+    setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, unread: false } : n)));
+    router.push(item.href);
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -72,7 +132,7 @@ export function NotificationDropdown() {
 
   const clearAll = () => {
     setNotifications([]);
-    toast.info('Notification feed cleared');
+    toast.info('Notifications cleared for this session');
   };
 
   const toggleUnread = (id: string) => {
@@ -83,12 +143,12 @@ export function NotificationDropdown() {
 
   const getIcon = (type: NotificationItem['type']) => {
     switch (type) {
-      case 'ci':
-        return <GitPullRequest className="w-4 h-4 text-emerald-500" />;
+      case 'project':
+        return <FolderKanban className="w-4 h-4 text-emerald-500" />;
       case 'task':
-        return <Zap className="w-4 h-4 text-indigo-500" />;
+        return <ListTodo className="w-4 h-4 text-indigo-500" />;
       case 'alert':
-        return <ShieldAlert className="w-4 h-4 text-amber-500" />;
+        return <AlertTriangle className="w-4 h-4 text-amber-500" />;
       default:
         return <CheckCircle2 className="w-4 h-4 text-purple-500" />;
     }
@@ -98,7 +158,7 @@ export function NotificationDropdown() {
     <div className="relative" ref={dropdownRef}>
       {/* Bell Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleOpen}
         aria-label="View notifications"
         className="relative w-9 h-9 rounded-xl glass-pill hover:bg-black/5 dark:hover:bg-white/10 flex items-center justify-center transition-colors focus:outline-none"
       >
@@ -148,11 +208,24 @@ export function NotificationDropdown() {
 
           {/* List */}
           <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/50">
-            {notifications.length > 0 ? (
+            {loading ? (
+              <div className="py-8 text-center flex flex-col items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading notifications…
+              </div>
+            ) : notifications.length > 0 ? (
               notifications.map((item) => (
                 <div
                   key={item.id}
-                  onClick={() => toggleUnread(item.id)}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openNotification(item)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openNotification(item);
+                    }
+                  }}
                   className={`p-3.5 flex items-start gap-3 cursor-pointer transition-colors ${
                     item.unread
                       ? 'bg-indigo-50/40 dark:bg-indigo-950/20 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/40'
@@ -186,7 +259,9 @@ export function NotificationDropdown() {
               ))
             ) : (
               <div className="py-8 text-center text-xs text-muted-foreground">
-                No notifications right now.
+                {loaded
+                  ? 'All caught up — no overdue tasks or recent project activity.'
+                  : 'Open to load notifications from your projects and tasks.'}
               </div>
             )}
           </div>
