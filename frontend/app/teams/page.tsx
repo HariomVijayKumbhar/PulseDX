@@ -12,12 +12,14 @@ export default function TeamsPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const load = async () => {
     setIsLoading(true);
     try {
       setTeams(await teamApi.list());
-    } catch {
-      toast.error('Failed to load teams — is MongoDB configured on the backend?');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to load teams — verify backend connection');
     } finally {
       setIsLoading(false);
     }
@@ -29,16 +31,22 @@ export default function TeamsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      toast.error('Team name is required');
+      return;
+    }
+    setIsSubmitting(true);
     try {
       await teamApi.create({ name: name.trim(), description: description.trim() || undefined });
-      toast.success('Team created 🎉');
+      toast.success('Team squad created 🎉');
       setName('');
       setDescription('');
       setIsCreating(false);
-      load();
-    } catch {
-      toast.error('Could not create team');
+      await load();
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not create team. Make sure you are signed in.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -77,9 +85,11 @@ export default function TeamsPage() {
           />
           <button
             type="submit"
-            className="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+            disabled={isSubmitting}
+            className="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50 inline-flex items-center gap-2"
           >
-            Create Team
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            <span>{isSubmitting ? 'Creating Team...' : 'Create Team'}</span>
           </button>
         </form>
       )}

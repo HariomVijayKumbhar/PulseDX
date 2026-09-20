@@ -1,23 +1,58 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Project } from '@/types/project';
+import { Task } from '@/types/task';
 import { ProductivitySummary } from '@/types/api';
 import { DynamicStats3D } from '@/components/3d/DynamicScenes';
 import { Box, BarChart2, Sparkles, Layers, Info } from 'lucide-react';
 
 interface StatsCardSectionProps {
-  summary: ProductivitySummary | null;
+  summary?: ProductivitySummary | null;
+  projects?: Project[];
+  tasks?: Task[];
   isLoading: boolean;
 }
 
-export function StatsCardSection({ summary, isLoading }: StatsCardSectionProps) {
+export function StatsCardSection({ summary, projects = [], tasks = [], isLoading }: StatsCardSectionProps) {
   const [viewMode, setViewMode] = useState<'3d' | '2d'>('3d');
 
-  if (isLoading || !summary) {
+  if (isLoading) {
     return (
       <div className="glass-panel p-6 rounded-3xl h-80 flex flex-col justify-between">
         <div className="h-6 w-48 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
         <div className="h-48 w-full bg-slate-200/60 dark:bg-slate-800/60 rounded-2xl animate-pulse" />
+      </div>
+    );
+  }
+
+  const colors = ['#6366f1', '#a855f7', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
+  const projectCompletionRates = summary?.projectCompletionRates?.length
+    ? summary.projectCompletionRates
+    : projects.map((proj, idx) => {
+        const projTasks = tasks.filter((t) => t.projectId === proj.id);
+        const done = projTasks.filter((t) => t.status === 'done').length;
+        const rate = projTasks.length > 0 ? Math.round((done / projTasks.length) * 100) : (proj.progress || 0);
+        return {
+          name: proj.title,
+          key: proj.key || proj.title.slice(0, 4).toUpperCase(),
+          rate,
+          color: colors[idx % colors.length],
+        };
+      });
+
+  if (projectCompletionRates.length === 0) {
+    return (
+      <div className="glass-panel p-6 rounded-3xl min-h-[300px] flex flex-col items-center justify-center text-center space-y-3">
+        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+          <Box className="w-6 h-6" />
+        </div>
+        <div>
+          <h3 className="text-base font-bold text-foreground">Project Completion Velocity</h3>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+            No active engineering initiatives yet. Create an initiative in the Projects tab or use the AI generator to start tracking delivery.
+          </p>
+        </div>
       </div>
     );
   }
@@ -70,12 +105,12 @@ export function StatsCardSection({ summary, isLoading }: StatsCardSectionProps) 
       <div className="my-3 min-h-[220px] flex items-center justify-center">
         {viewMode === '3d' ? (
           <div className="w-full">
-            <DynamicStats3D stats={summary.projectCompletionRates} />
+            <DynamicStats3D stats={projectCompletionRates} />
           </div>
         ) : (
           /* 2D Flat Chart View */
           <div className="w-full h-56 flex items-end justify-between gap-3 px-4 pt-4 pb-2">
-            {summary.projectCompletionRates.map((proj) => (
+            {projectCompletionRates.map((proj) => (
               <div key={proj.key} className="flex-1 flex flex-col items-center gap-2">
                 <span className="text-xs font-bold text-foreground">{proj.rate}%</span>
                 <div className="w-full max-w-[48px] bg-slate-200 dark:bg-slate-800 rounded-t-xl relative h-36 overflow-hidden">
@@ -101,7 +136,7 @@ export function StatsCardSection({ summary, isLoading }: StatsCardSectionProps) 
 
       {/* Footer Legend */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-slate-200/50 dark:border-slate-800/60">
-        {summary.projectCompletionRates.map((proj) => (
+        {projectCompletionRates.map((proj) => (
           <div key={proj.key} className="flex items-center gap-2">
             <span
               className="w-2.5 h-2.5 rounded-full shrink-0"

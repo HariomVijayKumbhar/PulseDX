@@ -6,7 +6,6 @@ import swaggerUi from 'swagger-ui-express';
 
 import swaggerDocument from './docs/swagger';
 import apiRouter from './routes/index';
-import authRoutes from './routes/authRoutes';
 import { generalLimiter } from './middleware/rateLimiter';
 import { requestLogger } from './middleware/logger';
 import { errorHandler } from './middleware/errorHandler';
@@ -74,7 +73,7 @@ app.get('/favicon.ico', (_req: Request, res: Response) => {
 
 // ── API routes
 app.use('/api', apiRouter);
-app.use('/auth', authRoutes);
+app.use('/', apiRouter);
 
 // ── 404 handler for any route not matched above
 app.use((_req: Request, _res: Response, next: NextFunction) => {

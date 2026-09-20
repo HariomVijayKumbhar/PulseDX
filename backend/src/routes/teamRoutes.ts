@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { validate } from '../middleware/validate';
 import { connectMongo, isMongoConnected } from '../lib/mongoClient';
 import Team, { TeamMember } from '../models/mongo/Team';
-import { requireAuth } from '../middleware/auth';
+import { authenticate, requireAuth } from '../middleware/auth';
 import { writeLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
@@ -27,7 +27,12 @@ const attachProjectSchema = z.object({
 
 /** Teams live in MongoDB — ensure a connection before handling a request. */
 async function ensureMongo() {
-  if (!isMongoConnected()) await connectMongo();
+  if (!isMongoConnected()) {
+    const conn = await connectMongo();
+    if (!conn) {
+      throw new Error('Database connection to MongoDB is unavailable. Please verify MONGODB_URI in your environment.');
+    }
+  }
 }
 
 // ── GET /api/teams — list all teams
@@ -58,6 +63,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 // ── POST /api/teams — create a team (auth required)
 router.post(
   '/',
+  authenticate,
   requireAuth,
   writeLimiter,
   validate({ body: createTeamSchema }),
@@ -96,6 +102,7 @@ router.post(
 // ── POST /api/teams/:id/members — add a member
 router.post(
   '/:id/members',
+  authenticate,
   requireAuth,
   writeLimiter,
   validate({ body: addMemberSchema }),
@@ -122,6 +129,7 @@ router.post(
 // ── POST /api/teams/:id/projects — attach a project to the team
 router.post(
   '/:id/projects',
+  authenticate,
   requireAuth,
   writeLimiter,
   validate({ body: attachProjectSchema }),

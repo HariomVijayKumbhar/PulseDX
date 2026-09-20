@@ -11,8 +11,10 @@ import { StatsCardSection } from './StatsCardSection';
 import { ActivityFeed } from './ActivityFeed';
 import { CommandPalette } from '@/components/palette/CommandPalette';
 import { CreateTaskModal } from '@/components/ui/CreateTaskModal';
-import { FolderKanban, Sparkles, Bot, PlusCircle, CheckCircle2 } from 'lucide-react';
+import { FolderKanban, Sparkles, Bot, PlusCircle, CheckCircle2, Check, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { createTask } from '@/lib/api/tasks';
+import { createProject } from '@/lib/api/projects';
 
 export function BentoGrid() {
   const {
@@ -41,30 +43,73 @@ export function BentoGrid() {
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiGoal, setAiGoal] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isAddingAiTasks, setIsAddingAiTasks] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
 
   const handleAiSuggest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aiGoal) return;
+    if (!aiGoal.trim()) return;
     setIsAiLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api';
+      const rawBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api').replace(/\/+$/, '');
+      const apiUrl = rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`;
+
       const res = await fetch(`${apiUrl}/ai/suggest-tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goal: aiGoal }),
+        body: JSON.stringify({ goal: aiGoal.trim() }),
       });
       const data = await res.json();
       if (data?.data?.suggestedTasks) {
         setAiSuggestions(data.data.suggestedTasks);
         toast.success(`Generated ${data.data.suggestedTasks.length} tasks with ${data.data.provider}`);
       } else {
-        throw new Error('No suggestions returned');
+        throw new Error(data?.error?.message || 'No suggestions returned');
       }
     } catch (err: any) {
       toast.error('AI generation fallback error: ' + (err.message || 'Check backend'));
     } finally {
       setIsAiLoading(false);
+    }
+  };
+
+  const handleAddAllAiTasks = async () => {
+    if (aiSuggestions.length === 0) return;
+    setIsAddingAiTasks(true);
+    try {
+      let targetProjectId = projects[0]?.id;
+      if (!targetProjectId) {
+        const newProj = await createProject({
+          title: 'AI Sprint Objective',
+          description: `Generated from AI objective: ${aiGoal}`,
+          category: 'ai',
+        });
+        targetProjectId = newProj.data?.id;
+      }
+
+      if (!targetProjectId) {
+        throw new Error('Please create an initiative first before adding tasks.');
+      }
+
+      for (const item of aiSuggestions) {
+        await createTask({
+          title: item.title,
+          description: item.description,
+          priority: item.priority || 'medium',
+          status: 'todo',
+          projectId: targetProjectId,
+        });
+      }
+
+      toast.success(`🎉 Added ${aiSuggestions.length} tasks directly to your sprint backlog!`);
+      setAiModalOpen(false);
+      setAiSuggestions([]);
+      setAiGoal('');
+      await loadAllData();
+    } catch (err: any) {
+      toast.error('Could not save AI tasks: ' + (err.message || 'Error'));
+    } finally {
+      setIsAddingAiTasks(false);
     }
   };
 
@@ -76,32 +121,34 @@ export function BentoGrid() {
       {/* Hero Welcome Banner with 3D Abstract Geometry */}
       <HeroBanner
         user={user}
+        tasks={tasks}
+        projects={projects}
         onNewTaskClick={() => setCreateTaskModalOpen(true)}
       />
 
-      {/* AI Sprint Assistant Quick Banner */}
-      <div className="glass-panel p-4 rounded-2xl border border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600/20 text-indigo-500 flex items-center justify-center shrink-0">
-            <Bot className="w-5 h-5 animate-pulse" />
+      {/* AI Sprint Assistant Quick Banner (Vibrant Highlighting) */}
+      <div className="relative overflow-hidden rounded-3xl p-5 border-2 border-indigo-500/40 bg-gradient-to-r from-indigo-500/15 via-purple-500/15 to-pink-500/10 shadow-xl shadow-indigo-500/15 transition-all hover:border-indigo-500/70 hover:shadow-indigo-500/25 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5 z-10">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/30">
+            <Bot className="w-6 h-6 animate-pulse" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-              <span>PulseDX AI Task & Sprint Generator</span>
-              <span className="text-[10px] bg-indigo-500/20 text-indigo-500 px-1.5 py-0.5 rounded-full font-mono">
-                Phase 4 AI Feature
+            <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
+              <span>PulseDX AI Task &amp; Sprint Generator</span>
+              <span className="text-[10px] bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-mono px-2 py-0.5 rounded-full font-bold shadow-sm uppercase tracking-wider">
+                ⚡ Highlighted AI Engine
               </span>
             </h3>
-            <p className="text-xs text-muted-foreground">
-              Describe any high-level objective and let AI decompose it into prioritized sprint tasks.
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Describe any high-level architecture goal and let AI decompose it directly into your backlog.
             </p>
           </div>
         </div>
         <button
           onClick={() => setAiModalOpen(true)}
-          className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-500/20 flex items-center gap-1.5 shrink-0 transition-all"
+          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-90 text-white text-xs font-bold shadow-lg shadow-indigo-500/30 flex items-center gap-2 shrink-0 transition-all active:scale-95 z-10"
         >
-          <Sparkles className="w-3.5 h-3.5" />
+          <Sparkles className="w-4 h-4" />
           <span>Launch AI Assistant</span>
         </button>
       </div>
@@ -155,30 +202,51 @@ export function BentoGrid() {
             </form>
 
             {aiSuggestions.length > 0 && (
-              <div className="mt-4 space-y-2 max-h-60 overflow-y-auto pr-1">
-                <h4 className="text-xs font-mono uppercase text-muted-foreground">Proposed Tasks</h4>
-                {aiSuggestions.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-xl bg-slate-100/60 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800/50"
+              <div className="mt-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-mono uppercase text-muted-foreground">Proposed Tasks ({aiSuggestions.length})</h4>
+                  <button
+                    onClick={handleAddAllAiTasks}
+                    disabled={isAddingAiTasks}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold text-foreground truncate">{item.title}</span>
-                      <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400">
-                        {item.priority}
-                      </span>
+                    {isAddingAiTasks ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <PlusCircle className="w-3.5 h-3.5" />
+                        <span>Add All to Sprint Backlog</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {aiSuggestions.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-xl bg-slate-100/60 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800/50"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-foreground truncate">{item.title}</span>
+                        <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-semibold">
+                          {item.priority}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-1">{item.description}</p>
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">{item.description}</p>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Quick Productivity Metrics Row */}
-      <QuickMetrics user={user} isLoading={isLoading} />
+      {/* Quick Productivity Metrics Row (Real Live Data) */}
+      <QuickMetrics user={user} tasks={tasks} projects={projects} isLoading={isLoading} />
 
       {/* Main Bento Section: Task Backlog (Left) + 3D Stats & Activity (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -198,7 +266,7 @@ export function BentoGrid() {
         </div>
 
         <div className="lg:col-span-5 xl:col-span-4 space-y-6">
-          <StatsCardSection summary={summary} isLoading={isLoading} />
+          <StatsCardSection summary={summary} projects={projects} tasks={tasks} isLoading={isLoading} />
           <ActivityFeed activities={activities} isLoading={isLoading} />
         </div>
       </div>

@@ -2,16 +2,26 @@
 
 import React from 'react';
 import { UserProfile } from '@/types/user';
+import { Task } from '@/types/task';
+import { Project } from '@/types/project';
 import { DynamicHero3D } from '@/components/3d/DynamicScenes';
-import { Sparkles, ArrowUpRight, Flame, Code2, GitPullRequest } from 'lucide-react';
+import { Sparkles, ArrowUpRight, Flame, Database, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface HeroBannerProps {
   user: UserProfile | null;
+  tasks?: Task[];
+  projects?: Project[];
   onNewTaskClick?: () => void;
 }
 
-export function HeroBanner({ user, onNewTaskClick }: HeroBannerProps) {
+export function HeroBanner({ user, tasks = [], projects = [], onNewTaskClick }: HeroBannerProps) {
+  const totalTasks = tasks.length;
+  const doneTasks = tasks.filter((t) => t.status === 'done').length;
+  const inProgressTasks = tasks.filter((t) => t.status === 'in_progress').length;
+  const completionRate = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+  const projectCount = projects.length;
+
   return (
     <div className="relative overflow-hidden rounded-3xl glass-panel border border-slate-200/80 dark:border-white/10 p-6 sm:p-8 transition-all">
       {/* Background Decorative Gradients */}
@@ -23,7 +33,11 @@ export function HeroBanner({ user, onNewTaskClick }: HeroBannerProps) {
         <div className="lg:col-span-7 space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold glass-pill text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Sprint 42 &middot; 4 Days Remaining</span>
+            <span>
+              {totalTasks > 0
+                ? `${doneTasks}/${totalTasks} Tasks Delivered (${completionRate}%)`
+                : 'Live Workspace &bull; Ready for Sprints'}
+            </span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground">
@@ -34,8 +48,16 @@ export function HeroBanner({ user, onNewTaskClick }: HeroBannerProps) {
           </h1>
 
           <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-xl">
-            You have completed <strong className="text-foreground font-semibold">88%</strong> of your committed sprint goals.
-            System telemetry reports all services healthy with sub-40ms latency.
+            {totalTasks > 0 ? (
+              <>
+                You have completed <strong className="text-foreground font-semibold">{completionRate}%</strong> of your sprint tasks ({doneTasks} closed, {inProgressTasks} in flight) across{' '}
+                <strong className="text-foreground font-semibold">{projectCount}</strong> active {projectCount === 1 ? 'initiative' : 'initiatives'}.
+              </>
+            ) : (
+              <>
+                Welcome to your engineering command center. Start by creating your first initiative and decomposing milestones into prioritized sprint tasks.
+              </>
+            )}
           </p>
 
           {/* Action Buttons */}
@@ -43,7 +65,7 @@ export function HeroBanner({ user, onNewTaskClick }: HeroBannerProps) {
             <button
               onClick={() => {
                 if (onNewTaskClick) onNewTaskClick();
-                else toast.info('New Task modal preview');
+                else toast.info('New Task modal');
               }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25 hover:from-indigo-500 hover:to-purple-500 active:scale-95 transition-all"
             >
@@ -52,14 +74,14 @@ export function HeroBanner({ user, onNewTaskClick }: HeroBannerProps) {
 
             <button
               onClick={() =>
-                toast.info('Sprint Velocity Digest', {
-                  description: '14 consecutive streak days. 34.5 deep focus hours recorded.',
+                toast.info('Workspace Telemetry', {
+                  description: `${totalTasks} total tasks logged across ${projectCount} active projects. All databases connected.`,
                 })
               }
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium glass-pill hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all text-foreground"
             >
-              <Flame className="w-4 h-4 text-amber-500" />
-              <span>Streak: {user?.stats?.streakDays || 14} Days</span>
+              <Database className="w-4 h-4 text-emerald-500" />
+              <span>{totalTasks} Tasks &bull; {projectCount} Projects</span>
               <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground" />
             </button>
           </div>
