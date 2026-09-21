@@ -27,6 +27,7 @@
     "express-rate-limit": "^7.3.1",
     "helmet": "^7.1.0",
     "mongoose": "^9.10.1",
+    "pg": "^8.23.0",
     "swagger-ui-express": "^5.0.1",
     "zod": "^3.23.8"
   },

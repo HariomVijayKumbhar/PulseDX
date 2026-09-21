@@ -1,10 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { validate } from '../middleware/validate';
-import { connectMongo, isMongoConnected } from '../lib/mongoClient';
-import Team, { TeamMember } from '../models/mongo/Team';
+import { supabase } from '../lib/supabaseClient';
 import { authenticate, requireAuth } from '../middleware/auth';
 import { writeLimiter } from '../middleware/rateLimiter';
+import { handleSupabaseError } from '../utils/dbError';
 
 const router = Router();
 
@@ -25,22 +25,38 @@ const attachProjectSchema = z.object({
   projectId: z.string().uuid(),
 });
 
-/** Teams live in MongoDB — ensure a connection before handling a request. */
-async function ensureMongo() {
-  if (!isMongoConnected()) {
-    const conn = await connectMongo();
-    if (!conn) {
-      throw new Error('Database connection to MongoDB is unavailable. Please verify MONGODB_URI in your environment.');
-    }
-  }
+/**
+ * Teams are stored in Supabase Postgres (same data layer as the rest of the app).
+ * Rows are mapped back into the Mongo-era DTO shape (id → _id) so the existing
+ * frontend contract keeps working unchanged.
+ */
+function toDto(row: any) {
+  return {
+    _id: row.id,
+    id: row.id,
+    name: row.name,
+    description: row.description ?? '',
+    ownerId: row.owner_id,
+    projectIds: row.project_ids ?? [],
+    members: row.members ?? [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
+
+const TEAM_SELECT = 'id, name, description, owner_id, project_ids, members, created_at, updated_at';
 
 // ── GET /api/teams — list all teams
 router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    await ensureMongo();
-    const teams = await Team.find().sort({ createdAt: -1 }).lean();
-    res.json({ data: teams, meta: { count: teams.length, timestamp: new Date().toISOString() } });
+    const { data, error } = await supabase
+      .from('teams')
+      .select(TEAM_SELECT)
+      .order('created_at', { ascending: false });
+    if (error) {
+      handleSupabaseError(error, 'Team');
+    }
+    res.json({ data: (data || []).map(toDto), meta: { count: data?.length ?? 0, timestamp: new Date().toISOString() } });
   } catch (error) {
     next(error);
   }
@@ -49,12 +65,14 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
 // ── GET /api/teams/:id — single team
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await ensureMongo();
-    const team = await Team.findById(req.params.id).lean();
-    if (!team) {
+    const { data, error } = await supabase.from('teams').select(TEAM_SELECT).eq('id', req.params.id).maybeSingle();
+    if (error) {
+      handleSupabaseError(error, 'Team');
+    }
+    if (!data) {
       return res.status(404).json({ error: { message: 'Team not found' } });
     }
-    res.json({ data: team, meta: { timestamp: new Date().toISOString() } });
+    res.json({ data: toDto(data), meta: { timestamp: new Date().toISOString() } });
   } catch (error) {
     next(error);
   }
@@ -69,31 +87,40 @@ router.post(
   validate({ body: createTeamSchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await ensureMongo();
       const { name, description, projectIds } = req.body;
-      const ownerId = (req as any).user?.id ?? '00000-0000-0000-0000-000';
+      const ownerId = (req as any).user?.id ?? '00000000-0000-0000-0000-000000000000';
 
-      const team = await Team.create({
-        name,
-        description: description ?? '',
-        ownerId,
-        projectIds: projectIds ?? [],
-        members: [
-          {
-            userId: ownerId,
-            name: (req as any).user?.email?.split('@')[0] ?? 'Owner',
-            email: (req as any).user?.email ?? 'owner@pulsedx.dev',
-            role: 'owner' as const,
-            joinedAt: new Date(),
-          },
-        ],
-      });
+      const members = [
+        {
+          userId: ownerId,
+          name: (req as any).user?.email?.split('@')[0] ?? 'Owner',
+          email: (req as any).user?.email ?? 'owner@pulsedx.dev',
+          role: 'owner' as const,
+          joinedAt: new Date().toISOString(),
+        },
+      ];
 
-      res.status(201).json({ data: team.toObject(), meta: { timestamp: new Date().toISOString() } });
-    } catch (error: any) {
-      if (error?.code === 11000) {
-        return res.status(409).json({ error: { message: 'A team with this name already exists' } });
+      const { data, error } = await supabase
+        .from('teams')
+        .insert({
+          name,
+          description: description ?? '',
+          owner_id: ownerId,
+          project_ids: projectIds ?? [],
+          members,
+        })
+        .select(TEAM_SELECT)
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          return res.status(409).json({ error: { message: 'A team with this name already exists' } });
+        }
+        handleSupabaseError(error, 'Team');
       }
+
+      res.status(201).json({ data: toDto(data), meta: { timestamp: new Date().toISOString() } });
+    } catch (error: any) {
       next(error);
     }
   }
@@ -108,18 +135,38 @@ router.post(
   validate({ body: addMemberSchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await ensureMongo();
       const { userId, name, email, role } = req.body;
-      const team = await Team.findById(req.params.id);
+
+      const { data: team, error: fetchError } = await supabase
+        .from('teams')
+        .select(TEAM_SELECT)
+        .eq('id', req.params.id)
+        .maybeSingle();
+      if (fetchError) {
+        handleSupabaseError(fetchError, 'Team');
+      }
       if (!team) {
         return res.status(404).json({ error: { message: 'Team not found' } });
       }
-      if (team.members.some((m: TeamMember) => m.userId === userId)) {
+      if ((team.members ?? []).some((m: any) => m.userId === userId)) {
         return res.status(409).json({ error: { message: 'User is already a member' } });
       }
-      team.members.push({ userId, name, email, role: role ?? 'member', joinedAt: new Date() });
-      await team.save();
-      res.json({ data: team.toObject(), meta: { timestamp: new Date().toISOString() } });
+
+      const updatedMembers = [
+        ...(team.members ?? []),
+        { userId, name, email, role: role ?? 'member', joinedAt: new Date().toISOString() },
+      ];
+      const { data, error } = await supabase
+        .from('teams')
+        .update({ members: updatedMembers, updated_at: new Date().toISOString() })
+        .eq('id', req.params.id)
+        .select(TEAM_SELECT)
+        .single();
+      if (error) {
+        handleSupabaseError(error, 'Team');
+      }
+
+      res.json({ data: toDto(data), meta: { timestamp: new Date().toISOString() } });
     } catch (error) {
       next(error);
     }
@@ -135,17 +182,36 @@ router.post(
   validate({ body: attachProjectSchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await ensureMongo();
       const { projectId } = req.body;
-      const team = await Team.findById(req.params.id);
+
+      const { data: team, error: fetchError } = await supabase
+        .from('teams')
+        .select(TEAM_SELECT)
+        .eq('id', req.params.id)
+        .maybeSingle();
+      if (fetchError) {
+        handleSupabaseError(fetchError, 'Team');
+      }
       if (!team) {
         return res.status(404).json({ error: { message: 'Team not found' } });
       }
-      if (!team.projectIds.includes(projectId)) {
-        team.projectIds.push(projectId);
-        await team.save();
+
+      const projectIds: string[] = team.project_ids ?? [];
+      if (!projectIds.includes(projectId)) {
+        projectIds.push(projectId);
+        const { data, error } = await supabase
+          .from('teams')
+          .update({ project_ids: projectIds, updated_at: new Date().toISOString() })
+          .eq('id', req.params.id)
+          .select(TEAM_SELECT)
+          .single();
+        if (error) {
+          handleSupabaseError(error, 'Team');
+        }
+        return res.json({ data: toDto(data), meta: { timestamp: new Date().toISOString() } });
       }
-      res.json({ data: team.toObject(), meta: { timestamp: new Date().toISOString() } });
+
+      res.json({ data: toDto(team), meta: { timestamp: new Date().toISOString() } });
     } catch (error) {
       next(error);
     }
