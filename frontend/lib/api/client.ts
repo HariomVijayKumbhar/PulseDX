@@ -4,6 +4,15 @@ import { ApiResponse } from '@/types/api';
 const rawBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api').replace(/\/+$/, '');
 const API_BASE_URL = rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`;
 
+/** Abort requests that hang (backend down, network stall) instead of waiting minutes */
+const REQUEST_TIMEOUT_MS = 10_000;
+/** Short TTL cache for GET responses so repeated mounts don't refetch the same data */
+const GET_CACHE_TTL_MS = 15_000;
+
+type CacheEntry = { data: unknown; expiresAt: number };
+const getCache = new Map<string, CacheEntry>();
+const inFlight = new Map<string, Promise<ApiResponse<unknown>>>();
+
 /**
  * Standard API Client Wrapper
  * Calls live backend endpoints with automatic Authorization Bearer token insertion
@@ -14,6 +23,23 @@ export async function apiClient<T>(
   options?: RequestInit,
   fallbackMock?: () => T
 ): Promise<ApiResponse<T>> {
+  const method = (options?.method || 'GET').toUpperCase();
+  const cacheKey = `${method} ${endpoint}`;
+
+  // Serve repeated GETs from cache to keep the UI snappy
+  if (method === 'GET' && typeof options?.body === 'undefined') {
+    const hit = getCache.get(cacheKey);
+    if (hit && hit.expiresAt > Date.now()) {
+      return hit.data as ApiResponse<T>;
+    }
+    // Deduplicate concurrent identical GETs (e.g. two components mounting at once)
+    const pending = inFlight.get(cacheKey);
+    if (pending) {
+      return pending as Promise<ApiResponse<T>>;
+    }
+  }
+
+  const doRequest = async (): Promise<ApiResponse<T>> => {
   try {
     // 1. Fetch access token if user is authenticated
     const { data } = await supabase.auth.getSession();
@@ -25,10 +51,14 @@ export async function apiClient<T>(
       ...(options?.headers as Record<string, string>),
     };
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     const res = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
@@ -36,11 +66,15 @@ export async function apiClient<T>(
     }
 
     const json = await res.json();
-    return {
+    const result: ApiResponse<T> = {
       data: json.data,
       success: true,
       timestamp: json.meta?.timestamp || new Date().toISOString(),
     };
+    if (method === 'GET') {
+      getCache.set(cacheKey, { data: result, expiresAt: Date.now() + GET_CACHE_TTL_MS });
+    }
+    return result;
   } catch (error) {
     // If backend is unreachable or not running, fall back gracefully to local mocks for uninterrupted UX
     if (fallbackMock) {
@@ -52,4 +86,15 @@ export async function apiClient<T>(
     }
     throw error;
   }
+  };
+
+  if (method !== 'GET') {
+    // Mutations: never cached, and bust the GET cache so the next read is fresh
+    getCache.clear();
+    return doRequest();
+  }
+
+  const promise = doRequest().finally(() => inFlight.delete(cacheKey));
+  inFlight.set(cacheKey, promise as Promise<ApiResponse<unknown>>);
+  return promise;
 }

@@ -1,8 +1,8 @@
 import rateLimit from 'express-rate-limit';
 
 const windowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10); // 15 minutes
-const maxGeneral = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10);
-const maxWrite = parseInt(process.env.RATE_LIMIT_WRITE_MAX_REQUESTS || '30', 10);
+const maxGeneral = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '600', 10);
+const maxWrite = parseInt(process.env.RATE_LIMIT_WRITE_MAX_REQUESTS || '150', 10);
 
 /**
  * General rate limiter for read operations and overall API traffic

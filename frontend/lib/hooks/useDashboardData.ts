@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Project } from '@/types/project';
 import { Task, TaskStatus, TaskPriority } from '@/types/task';
 import { UserProfile, ActivityItem } from '@/types/user';
@@ -64,8 +64,15 @@ export function useDashboardData(initialSearchQuery?: string) {
     }
   }, []);
 
+  // Track the first run so we don't double-fetch tasks right after loadAllData
+  const isFirstFilterRun = useRef(true);
+
   // Trigger task reload when filters change
   useEffect(() => {
+    if (isFirstFilterRun.current) {
+      isFirstFilterRun.current = false;
+      return; // loadAllData already fetched the unfiltered task list
+    }
     if (!isLoading) {
       refreshTasks({
         status: statusFilter,

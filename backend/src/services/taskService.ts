@@ -214,48 +214,40 @@ export class TaskService {
    * Aggregate stats query computed at the database level for the Task 1 dashboard
    */
   public async getStatsOverview(ownerId?: string): Promise<StatsOverview> {
-    const scope = ownerId
-      ? supabase
-          .from('tasks')
-          .select('*, projects!inner(owner_id)', { count: 'exact', head: true })
-          .eq('projects.owner_id', ownerId)
-      : null;
-    const scopedTasks = () =>
-      ownerId
-        ? supabase
-            .from('tasks')
-            .select('*, projects!inner(owner_id)', { count: 'exact', head: true })
-            .eq('projects.owner_id', ownerId)
-        : supabase.from('tasks').select('*', { count: 'exact', head: true });
+    // 3 lightweight queries instead of 10 separate count queries:
+    // grouped counts by status, grouped counts by priority, and project/user counts.
+    const scoped = () => {
+      let q = supabase.from('tasks').select('status, priority, projects!inner(owner_id)');
+      if (ownerId) {
+        q = q.eq('projects.owner_id', ownerId);
+      }
+      return q;
+    };
 
-    const [
-      totalTasksRes,
-      todoTasksRes,
-      inProgressTasksRes,
-      doneTasksRes,
-      lowPriorityRes,
-      medPriorityRes,
-      highPriorityRes,
-      urgentPriorityRes,
-      projectsRes,
-      usersRes,
-    ] = await Promise.all([
-      scopedTasks(),
-      scopedTasks().eq('status', 'todo'),
-      scopedTasks().eq('status', 'in-progress'),
-      scopedTasks().eq('status', 'done'),
-      scopedTasks().eq('priority', 'low'),
-      scopedTasks().eq('priority', 'medium'),
-      scopedTasks().eq('priority', 'high'),
-      scopedTasks().eq('priority', 'urgent'),
+    const [tasksRes, projectsRes, usersRes] = await Promise.all([
+      scoped(),
       ownerId
-        ? supabase.from('projects').select('*', { count: 'exact', head: true }).eq('owner_id', ownerId)
-        : supabase.from('projects').select('*', { count: 'exact', head: true }),
-      supabase.from('users').select('*', { count: 'exact', head: true }),
+        ? supabase.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId)
+        : supabase.from('projects').select('id', { count: 'exact', head: true }),
+      supabase.from('users').select('id', { count: 'exact', head: true }),
     ]);
 
-    const totalTasks = totalTasksRes.count || 0;
-    const doneTasks = doneTasksRes.count || 0;
+    if (tasksRes.error) {
+      handleSupabaseError(tasksRes.error, 'Task');
+    }
+
+    // Group counts in memory (single round-trip instead of one query per bucket)
+    let totalTasks = 0;
+    let doneTasks = 0;
+    const byStatus: Record<string, number> = { todo: 0, 'in-progress': 0, done: 0 };
+    const byPriority: Record<string, number> = { low: 0, medium: 0, high: 0, urgent: 0 };
+
+    for (const row of tasksRes.data || []) {
+      totalTasks += 1;
+      if (row.status in byStatus) byStatus[row.status] += 1;
+      if (row.priority in byPriority) byPriority[row.priority] += 1;
+    }
+    doneTasks = byStatus['done'];
     const completionPercentage = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
     return {
@@ -263,15 +255,15 @@ export class TaskService {
       completedTasks: doneTasks,
       completionPercentage,
       tasksByStatus: {
-        todo: todoTasksRes.count || 0,
-        inProgress: inProgressTasksRes.count || 0,
+        todo: byStatus['todo'],
+        inProgress: byStatus['in-progress'],
         done: doneTasks,
       },
       tasksByPriority: {
-        low: lowPriorityRes.count || 0,
-        medium: medPriorityRes.count || 0,
-        high: highPriorityRes.count || 0,
-        urgent: urgentPriorityRes.count || 0,
+        low: byPriority['low'],
+        medium: byPriority['medium'],
+        high: byPriority['high'],
+        urgent: byPriority['urgent'],
       },
       totalProjects: projectsRes.count || 0,
       totalUsers: usersRes.count || 0,
