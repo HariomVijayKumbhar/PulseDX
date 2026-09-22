@@ -33,7 +33,8 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      callback(new Error(`CORS: origin ${origin} not allowed`));
+      // Reject disallowed origins cleanly instead of crashing into a 500
+      return callback(null, false);
     },
     credentials: true,
   })

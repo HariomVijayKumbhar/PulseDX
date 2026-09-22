@@ -149,6 +149,60 @@ export const teamApi = {
       )
     ),
 
+  removeMember: (id: string, userId: string) =>
+    unwrap<TeamDto>(
+      apiClient<TeamDto>(
+        `/teams/${id}/members/${userId}`,
+        { method: 'DELETE' },
+        () => {
+          const idx = teamsStore.findIndex((t) => t._id === id || t.id === id);
+          if (idx === -1) throw new Error(`Team ${id} not found`);
+          const existing = teamsStore[idx];
+          const updated: TeamDto = {
+            ...existing,
+            members: existing.members.filter((m) => m.userId !== userId),
+            updatedAt: new Date().toISOString(),
+          };
+          teamsStore[idx] = updated;
+          return updated;
+        }
+      )
+    ),
+
+  detachProject: (id: string, projectId: string) =>
+    unwrap<TeamDto>(
+      apiClient<TeamDto>(
+        `/teams/${id}/projects/${projectId}`,
+        { method: 'DELETE' },
+        () => {
+          const idx = teamsStore.findIndex((t) => t._id === id || t.id === id);
+          if (idx === -1) throw new Error(`Team ${id} not found`);
+          const existing = teamsStore[idx];
+          const updated: TeamDto = {
+            ...existing,
+            projectIds: existing.projectIds.filter((p) => p !== projectId),
+            updatedAt: new Date().toISOString(),
+          };
+          teamsStore[idx] = updated;
+          return updated;
+        }
+      )
+    ),
+
+  delete: (id: string) =>
+    unwrap<{ deleted: boolean }>(
+      apiClient<{ deleted: boolean }>(
+        `/teams/${id}`,
+        { method: 'DELETE' },
+        () => {
+          const idx = teamsStore.findIndex((t) => t._id === id || t.id === id);
+          if (idx === -1) throw new Error(`Team ${id} not found`);
+          teamsStore.splice(idx, 1);
+          return { deleted: true };
+        }
+      )
+    ),
+
   attachProject: (id: string, projectId: string) =>
     unwrap<TeamDto>(
       apiClient<TeamDto>(

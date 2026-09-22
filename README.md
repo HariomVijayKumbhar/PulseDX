@@ -31,12 +31,14 @@
 ## 🚀 Quick Start Guide
 
 ### Prerequisites
+
 - **Node.js 18+** & **npm 9+**
 - A **Supabase account** (free tier at [database.new](https://database.new))
 
 ---
 
 ### 1. Database Setup (Supabase)
+
 1. In your Supabase Project Dashboard, navigate to the **SQL Editor**.
 2. Open and run the migration script located at:
    ```
@@ -51,6 +53,7 @@
 ---
 
 ### 2. Backend Setup (`/backend`)
+
 ```bash
 cd backend
 cp .env.example .env
@@ -58,6 +61,7 @@ npm install
 ```
 
 Configure your `backend/.env` with your Supabase credentials:
+
 ```env
 PORT=5000
 NODE_ENV=development
@@ -72,6 +76,7 @@ OPENAI_API_KEY=your_openai_api_key
 ```
 
 Populate the database with sample data and launch the server:
+
 ```bash
 npm run db:seed     # Seeds sample users, projects, and tasks
 npm run dev         # Launches Express API on http://localhost:5000
@@ -84,6 +89,7 @@ npm run dev         # Launches Express API on http://localhost:5000
 ---
 
 ### 3. Frontend Setup (`/frontend`)
+
 ```bash
 cd frontend
 cp .env.local.example .env.local
@@ -91,6 +97,7 @@ npm install
 ```
 
 Configure your `frontend/.env.local`:
+
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
 NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
@@ -98,9 +105,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
 ```
 
 Start the Next.js development server:
+
 ```bash
 npm run dev
 ```
+
 Open [http://localhost:3000](http://localhost:3000).
 
 ---
@@ -136,11 +145,19 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 🚢 Production Deployment
+## 🚢 Production Deployment (Render)
 
-- **Frontend (Next.js)**: Deploy to [Vercel](https://vercel.com) by pointing to the `/frontend` root directory.
-- **Backend (Express)**: Deploy to [Render](https://render.com) or [Railway](https://railway.app) by setting root directory to `/backend` with build command `npm run build` and start command `npm start`.
-- Ensure `ALLOWED_ORIGINS` on the backend matches the production frontend domain, and `NEXT_PUBLIC_API_URL` points to the deployed backend URL.
+The repo ships with a **Render Blueprint** (`render.yaml`) that creates both services in one shot.
+
+1. Push this repository to GitHub.
+2. In [Render](https://dashboard.render.com): **Blueprints → New Blueprint Instance** → pick the repo → **Apply**. Render reads `render.yaml` and creates `pulsedx-api` (Express, root `backend`) and `pulsedx-frontend` (Next.js, root `frontend`).
+3. Fill in the `sync: false` secrets in each service's **Environment** tab:
+   - **Backend**: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `MONGODB_URI`, and `ALLOWED_ORIGINS=https://pulsedx-frontend.onrender.com` (exact URL of the frontend service).
+   - **Frontend**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_API_URL=https://pulsedx-api.onrender.com/api`.
+4. Deploy backend first, copy its real URL, set it as `NEXT_PUBLIC_API_URL` on the frontend, then deploy the frontend. Finally, set the frontend URL in `ALLOWED_ORIGINS` on the backend and manually redeploy the backend.
+5. Verify: `https://pulsedx-api.onrender.com/api/health` → `"status":"ok"`, and the frontend loads + login works.
+
+Alternatives: frontend on Vercel (`/frontend` root) with backend on Render is also supported — see `.env.deploy.example` for the exact variable cheat sheet.
 
 ---
 
@@ -150,15 +167,16 @@ Docker Compose orchestrates all three services — **MongoDB**, **Express API**,
 
 ### Service Architecture
 
-| Service    | Container           | Port   | Data store       |
-|------------|---------------------|--------|------------------|
-| `mongo`    | pulsedx-mongo       | 27017  | Persistent volume|
-| `backend`  | pulsedx-backend     | 5000   | Supabase + Mongo |
-| `frontend` | pulsedx-frontend    | 3000   | —                |
+| Service    | Container        | Port  | Data store        |
+| ---------- | ---------------- | ----- | ----------------- |
+| `mongo`    | pulsedx-mongo    | 27017 | Persistent volume |
+| `backend`  | pulsedx-backend  | 5000  | Supabase + Mongo  |
+| `frontend` | pulsedx-frontend | 3000  | —                 |
 
 > **Teams** are stored in MongoDB. **Users / Projects / Tasks** use Supabase PostgreSQL.
 
 ### Prerequisites
+
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (v24+)
 
 ### Quick Start
@@ -182,12 +200,12 @@ docker compose exec backend npm run db:seed:teams
 
 ### URLs (after startup)
 
-| URL                                      | Description              |
-|------------------------------------------|--------------------------|
-| http://localhost:3000                    | Frontend (Next.js)       |
-| http://localhost:5000/api/health         | API health check         |
-| http://localhost:5000/api/docs           | Swagger UI               |
-| http://localhost:5000/api/teams          | Teams endpoint (MongoDB) |
+| URL                              | Description              |
+| -------------------------------- | ------------------------ |
+| http://localhost:3000            | Frontend (Next.js)       |
+| http://localhost:5000/api/health | API health check         |
+| http://localhost:5000/api/docs   | Swagger UI               |
+| http://localhost:5000/api/teams  | Teams endpoint (MongoDB) |
 
 ### Common Commands
 
@@ -216,4 +234,3 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 This mounts your local `backend/src` and `frontend/` directories into the containers and runs `tsx watch` / `next dev` inside them.
-
