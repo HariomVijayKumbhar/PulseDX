@@ -84,6 +84,7 @@ export default function Hero3DCanvas() {
   return (
     <div className="w-full h-full min-h-[200px] sm:min-h-[220px] relative pointer-events-auto touch-pan-y" style={{ touchAction: 'pan-y' }}>
       <Canvas
+        dpr={[1, 1.25]}
         camera={{ position: [0, 0, 4.8], fov: 45 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         className="w-full h-full"

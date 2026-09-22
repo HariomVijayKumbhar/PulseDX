@@ -5,13 +5,29 @@ const rawBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api')
 const API_BASE_URL = rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`;
 
 /** Abort requests that hang (backend down, network stall) instead of waiting minutes */
-const REQUEST_TIMEOUT_MS = 10_000;
+const REQUEST_TIMEOUT_MS = 2_500;
 /** Short TTL cache for GET responses so repeated mounts don't refetch the same data */
-const GET_CACHE_TTL_MS = 15_000;
+const GET_CACHE_TTL_MS = 30_000;
 
 type CacheEntry = { data: unknown; expiresAt: number };
 const getCache = new Map<string, CacheEntry>();
 const inFlight = new Map<string, Promise<ApiResponse<unknown>>>();
+
+let cachedToken: { token?: string; expiresAt: number } | null = null;
+async function getAuthToken(): Promise<string | undefined> {
+  const now = Date.now();
+  if (cachedToken && cachedToken.expiresAt > now) {
+    return cachedToken.token;
+  }
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    cachedToken = { token, expiresAt: now + 30_000 };
+    return token;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Standard API Client Wrapper
@@ -41,9 +57,8 @@ export async function apiClient<T>(
 
   const doRequest = async (): Promise<ApiResponse<T>> => {
   try {
-    // 1. Fetch access token if user is authenticated
-    const { data } = await supabase.auth.getSession();
-    const token = data?.session?.access_token;
+    // 1. Fetch access token if user is authenticated (with in-memory cache)
+    const token = await getAuthToken();
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

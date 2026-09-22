@@ -12,6 +12,7 @@ export const generalLimiter = rateLimit({
   max: maxGeneral,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'development',
   message: {
     error: {
       message: 'Too many requests from this IP, please try again later',
@@ -28,6 +29,7 @@ export const writeLimiter = rateLimit({
   max: maxWrite,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'development',
   message: {
     error: {
       message: 'Too many mutation requests from this IP, please slow down',

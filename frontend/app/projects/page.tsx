@@ -25,9 +25,13 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
+  const isInitialLoad = React.useRef(true);
+
   useEffect(() => {
-    async function load() {
-      setIsLoading(true);
+    const timer = setTimeout(async () => {
+      if (isInitialLoad.current) {
+        setIsLoading(true);
+      }
       try {
         const res = await getProjects({
           category: selectedCategory === 'all' ? undefined : selectedCategory,
@@ -38,9 +42,11 @@ export default function ProjectsPage() {
         toast.error('Failed to load projects');
       } finally {
         setIsLoading(false);
+        isInitialLoad.current = false;
       }
-    }
-    load();
+    }, searchQuery ? 250 : 0);
+
+    return () => clearTimeout(timer);
   }, [selectedCategory, searchQuery]);
 
   return (

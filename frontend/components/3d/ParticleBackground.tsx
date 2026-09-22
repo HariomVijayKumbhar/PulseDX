@@ -77,17 +77,18 @@ function ParticleField({ count = 80 }: { count?: number }) {
 export default function ParticleBackground() {
   const prefersReducedMotion = useReducedMotion();
 
-  if (prefersReducedMotion) {
+  if (prefersReducedMotion || process.env.NEXT_PUBLIC_ENABLE_PARTICLES === 'false') {
     return null;
   }
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-30 dark:opacity-40">
       <Canvas
+        dpr={1}
         camera={{ position: [0, 0, 8], fov: 60 }}
         gl={{ antialias: false, alpha: true, powerPreference: 'low-power' }}
       >
-        <ParticleField count={90} />
+        <ParticleField count={60} />
       </Canvas>
     </div>
   );

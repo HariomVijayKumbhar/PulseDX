@@ -67,19 +67,23 @@ export function useDashboardData(initialSearchQuery?: string) {
   // Track the first run so we don't double-fetch tasks right after loadAllData
   const isFirstFilterRun = useRef(true);
 
-  // Trigger task reload when filters change
+  // Trigger task reload when filters change (debounced for search typing to stay silky smooth)
   useEffect(() => {
     if (isFirstFilterRun.current) {
       isFirstFilterRun.current = false;
       return; // loadAllData already fetched the unfiltered task list
     }
-    if (!isLoading) {
+    if (isLoading) return;
+
+    const timer = setTimeout(() => {
       refreshTasks({
         status: statusFilter,
         priority: priorityFilter,
         searchQuery: searchQuery.trim(),
       });
-    }
+    }, searchQuery ? 250 : 0);
+
+    return () => clearTimeout(timer);
   }, [statusFilter, priorityFilter, searchQuery, refreshTasks, isLoading]);
 
   useEffect(() => {

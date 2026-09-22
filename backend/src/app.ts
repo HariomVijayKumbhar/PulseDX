@@ -25,11 +25,15 @@ app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (curl, Postman, server-to-server)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS: origin ${origin} not allowed`));
+      if (!origin) return callback(null, true);
+      // In development, permit any localhost / 127.0.0.1 port (e.g. 3000, 3001, 3002)
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
       }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true,
   })
