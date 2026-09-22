@@ -1,0 +1,46 @@
+# ============================================================
+# PulseDX — Docker Compose Override (Development)
+#
+# Extends docker-compose.yml with volume mounts and dev servers
+# so your code changes are reflected instantly without rebuilding.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# ============================================================
+
+services:
+
+  mongo:
+    ports:
+      # Expose MongoDB to host so you can browse with Compass / mongosh
+      - "27017:27017"
+
+  backend:
+    build:
+      target: builder           # stop at the builder stage (includes devDeps)
+    command: npm run dev         # tsx watch — live reload on file change
+    environment:
+      NODE_ENV: development
+      ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    volumes:
+      - ./backend/src:/app/src:ro       # mount source for live reload
+      - ./backend/tsconfig.json:/app/tsconfig.json:ro
+    ports:
+      - "5000:5000"
+
+  frontend:
+    # Override the image build — run the dev server from the host directory
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: deps              # only install deps, skip build
+    command: npm run dev        # next dev --turbo — HMR
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+    volumes:
+      - ./frontend:/app:rw                   # full source mount for HMR
+      - /app/node_modules                    # keep container's node_modules
+      - /app/.next                           # keep container's build cache
+    ports:
+      - "3000:3000"

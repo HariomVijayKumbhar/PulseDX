@@ -1,62 +1,49 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { validate } from '../middleware/validate';
-import { supabase } from '../lib/supabaseClient';
+import { connectMongo, isMongoConnected } from '../lib/mongoClient';
+import Team, { TeamMember } from '../models/mongo/Team';
 import { authenticate, requireAuth } from '../middleware/auth';
 import { writeLimiter } from '../middleware/rateLimiter';
-import { handleSupabaseError } from '../utils/dbError';
 
 const router = Router();
 
 const createTeamSchema = z.object({
   name: z.string().min(2).max(80),
   description: z.string().max(300).optional(),
-  projectIds: z.array(z.string().uuid()).optional(),
+  projectIds: z.array(z.string()).optional(),
 });
 
 const addMemberSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().min(1),
   name: z.string().min(1).max(80),
   email: z.string().email(),
   role: z.enum(['admin', 'member']).optional(),
 });
 
 const attachProjectSchema = z.object({
-  projectId: z.string().uuid(),
+  projectId: z.string().min(1),
 });
 
-/**
- * Teams are stored in Supabase Postgres (same data layer as the rest of the app).
- * Rows are mapped back into the Mongo-era DTO shape (id → _id) so the existing
- * frontend contract keeps working unchanged.
- */
-function toDto(row: any) {
-  return {
-    _id: row.id,
-    id: row.id,
-    name: row.name,
-    description: row.description ?? '',
-    ownerId: row.owner_id,
-    projectIds: row.project_ids ?? [],
-    members: row.members ?? [],
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+/** Teams live in MongoDB — ensure a connection before handling a request. */
+async function ensureMongo() {
+  if (!isMongoConnected()) {
+    const conn = await connectMongo();
+    if (!conn) {
+      throw new Error(
+        'Database connection to MongoDB is unavailable. ' +
+          'Please verify MONGODB_URI is set in your environment.'
+      );
+    }
+  }
 }
-
-const TEAM_SELECT = 'id, name, description, owner_id, project_ids, members, created_at, updated_at';
 
 // ── GET /api/teams — list all teams
 router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const { data, error } = await supabase
-      .from('teams')
-      .select(TEAM_SELECT)
-      .order('created_at', { ascending: false });
-    if (error) {
-      handleSupabaseError(error, 'Team');
-    }
-    res.json({ data: (data || []).map(toDto), meta: { count: data?.length ?? 0, timestamp: new Date().toISOString() } });
+    await ensureMongo();
+    const teams = await Team.find().sort({ createdAt: -1 }).lean();
+    res.json({ data: teams, meta: { count: teams.length, timestamp: new Date().toISOString() } });
   } catch (error) {
     next(error);
   }
@@ -65,14 +52,12 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
 // ── GET /api/teams/:id — single team
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { data, error } = await supabase.from('teams').select(TEAM_SELECT).eq('id', req.params.id).maybeSingle();
-    if (error) {
-      handleSupabaseError(error, 'Team');
-    }
-    if (!data) {
+    await ensureMongo();
+    const team = await Team.findById(req.params.id).lean();
+    if (!team) {
       return res.status(404).json({ error: { message: 'Team not found' } });
     }
-    res.json({ data: toDto(data), meta: { timestamp: new Date().toISOString() } });
+    res.json({ data: team, meta: { timestamp: new Date().toISOString() } });
   } catch (error) {
     next(error);
   }
@@ -87,40 +72,79 @@ router.post(
   validate({ body: createTeamSchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      await ensureMongo();
       const { name, description, projectIds } = req.body;
       const ownerId = (req as any).user?.id ?? '00000000-0000-0000-0000-000000000000';
 
-      const members = [
-        {
-          userId: ownerId,
-          name: (req as any).user?.email?.split('@')[0] ?? 'Owner',
-          email: (req as any).user?.email ?? 'owner@pulsedx.dev',
-          role: 'owner' as const,
-          joinedAt: new Date().toISOString(),
-        },
-      ];
+      const team = await Team.create({
+        name,
+        description: description ?? '',
+        ownerId,
+        projectIds: projectIds ?? [],
+        members: [
+          {
+            userId: ownerId,
+            name: (req as any).user?.email?.split('@')[0] ?? 'Owner',
+            email: (req as any).user?.email ?? 'owner@pulsedx.dev',
+            role: 'owner' as const,
+            joinedAt: new Date(),
+          },
+        ],
+      });
 
-      const { data, error } = await supabase
-        .from('teams')
-        .insert({
-          name,
-          description: description ?? '',
-          owner_id: ownerId,
-          project_ids: projectIds ?? [],
-          members,
-        })
-        .select(TEAM_SELECT)
-        .single();
-
-      if (error) {
-        if (error.code === '23505') {
-          return res.status(409).json({ error: { message: 'A team with this name already exists' } });
-        }
-        handleSupabaseError(error, 'Team');
-      }
-
-      res.status(201).json({ data: toDto(data), meta: { timestamp: new Date().toISOString() } });
+      res.status(201).json({ data: team.toObject(), meta: { timestamp: new Date().toISOString() } });
     } catch (error: any) {
+      if (error?.code === 11000) {
+        return res.status(409).json({ error: { message: 'A team with this name already exists' } });
+      }
+      next(error);
+    }
+  }
+);
+
+// ── PATCH /api/teams/:id — update team name / description
+router.patch(
+  '/:id',
+  authenticate,
+  requireAuth,
+  writeLimiter,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await ensureMongo();
+      const { name, description } = req.body;
+      const team = await Team.findByIdAndUpdate(
+        req.params.id,
+        { ...(name !== undefined && { name }), ...(description !== undefined && { description }) },
+        { new: true, runValidators: true }
+      ).lean();
+      if (!team) {
+        return res.status(404).json({ error: { message: 'Team not found' } });
+      }
+      res.json({ data: team, meta: { timestamp: new Date().toISOString() } });
+    } catch (error: any) {
+      if (error?.code === 11000) {
+        return res.status(409).json({ error: { message: 'A team with this name already exists' } });
+      }
+      next(error);
+    }
+  }
+);
+
+// ── DELETE /api/teams/:id — delete a team
+router.delete(
+  '/:id',
+  authenticate,
+  requireAuth,
+  writeLimiter,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await ensureMongo();
+      const team = await Team.findByIdAndDelete(req.params.id).lean();
+      if (!team) {
+        return res.status(404).json({ error: { message: 'Team not found' } });
+      }
+      res.json({ data: { deleted: true }, meta: { timestamp: new Date().toISOString() } });
+    } catch (error) {
       next(error);
     }
   }
@@ -135,38 +159,44 @@ router.post(
   validate({ body: addMemberSchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      await ensureMongo();
       const { userId, name, email, role } = req.body;
-
-      const { data: team, error: fetchError } = await supabase
-        .from('teams')
-        .select(TEAM_SELECT)
-        .eq('id', req.params.id)
-        .maybeSingle();
-      if (fetchError) {
-        handleSupabaseError(fetchError, 'Team');
-      }
+      const team = await Team.findById(req.params.id);
       if (!team) {
         return res.status(404).json({ error: { message: 'Team not found' } });
       }
-      if ((team.members ?? []).some((m: any) => m.userId === userId)) {
+      if (team.members.some((m: TeamMember) => m.userId === userId)) {
         return res.status(409).json({ error: { message: 'User is already a member' } });
       }
+      team.members.push({ userId, name, email, role: role ?? 'member', joinedAt: new Date() });
+      await team.save();
+      res.json({ data: team.toObject(), meta: { timestamp: new Date().toISOString() } });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
-      const updatedMembers = [
-        ...(team.members ?? []),
-        { userId, name, email, role: role ?? 'member', joinedAt: new Date().toISOString() },
-      ];
-      const { data, error } = await supabase
-        .from('teams')
-        .update({ members: updatedMembers, updated_at: new Date().toISOString() })
-        .eq('id', req.params.id)
-        .select(TEAM_SELECT)
-        .single();
-      if (error) {
-        handleSupabaseError(error, 'Team');
+// ── DELETE /api/teams/:id/members/:userId — remove a member
+router.delete(
+  '/:id/members/:userId',
+  authenticate,
+  requireAuth,
+  writeLimiter,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await ensureMongo();
+      const team = await Team.findById(req.params.id);
+      if (!team) {
+        return res.status(404).json({ error: { message: 'Team not found' } });
       }
-
-      res.json({ data: toDto(data), meta: { timestamp: new Date().toISOString() } });
+      const before = team.members.length;
+      team.members = team.members.filter((m: TeamMember) => m.userId !== req.params.userId) as any;
+      if (team.members.length === before) {
+        return res.status(404).json({ error: { message: 'Member not found in team' } });
+      }
+      await team.save();
+      res.json({ data: team.toObject(), meta: { timestamp: new Date().toISOString() } });
     } catch (error) {
       next(error);
     }
@@ -182,36 +212,39 @@ router.post(
   validate({ body: attachProjectSchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      await ensureMongo();
       const { projectId } = req.body;
-
-      const { data: team, error: fetchError } = await supabase
-        .from('teams')
-        .select(TEAM_SELECT)
-        .eq('id', req.params.id)
-        .maybeSingle();
-      if (fetchError) {
-        handleSupabaseError(fetchError, 'Team');
-      }
+      const team = await Team.findById(req.params.id);
       if (!team) {
         return res.status(404).json({ error: { message: 'Team not found' } });
       }
-
-      const projectIds: string[] = team.project_ids ?? [];
-      if (!projectIds.includes(projectId)) {
-        projectIds.push(projectId);
-        const { data, error } = await supabase
-          .from('teams')
-          .update({ project_ids: projectIds, updated_at: new Date().toISOString() })
-          .eq('id', req.params.id)
-          .select(TEAM_SELECT)
-          .single();
-        if (error) {
-          handleSupabaseError(error, 'Team');
-        }
-        return res.json({ data: toDto(data), meta: { timestamp: new Date().toISOString() } });
+      if (!team.projectIds.includes(projectId)) {
+        team.projectIds.push(projectId);
+        await team.save();
       }
+      res.json({ data: team.toObject(), meta: { timestamp: new Date().toISOString() } });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
-      res.json({ data: toDto(team), meta: { timestamp: new Date().toISOString() } });
+// ── DELETE /api/teams/:id/projects/:projectId — detach a project
+router.delete(
+  '/:id/projects/:projectId',
+  authenticate,
+  requireAuth,
+  writeLimiter,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await ensureMongo();
+      const team = await Team.findById(req.params.id);
+      if (!team) {
+        return res.status(404).json({ error: { message: 'Team not found' } });
+      }
+      team.projectIds = team.projectIds.filter((p: string) => p !== req.params.projectId);
+      await team.save();
+      res.json({ data: team.toObject(), meta: { timestamp: new Date().toISOString() } });
     } catch (error) {
       next(error);
     }

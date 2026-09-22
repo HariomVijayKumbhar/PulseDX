@@ -23,6 +23,7 @@ backend/dist/
 !*.env.vercel.example
 !*.env.deploy.example
 !.env.deploy.example
+!.env.docker.example
 
 # Local QA scripts (may reference secrets locally)
 qa-*.mjs
@@ -40,3 +41,8 @@ yarn-error.log*
 backend-dev.log
 backend-err.log
 frontend/dev.log
+frontend-dev.log
+frontend-err.log
+server.log
+server.err.log
+

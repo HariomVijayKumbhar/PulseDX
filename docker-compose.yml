@@ -1,0 +1,111 @@
+# ============================================================
+# PulseDX — Docker Compose (Production)
+#
+# Services:
+#   • mongo        — MongoDB 7 (Teams store)
+#   • backend      — Express REST API (port 5000)
+#   • frontend     — Next.js 14  (port 3000)
+#
+# Quick start:
+#   1. cp .env.docker.example .env
+#   2. Fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY
+#   3. docker compose up --build -d
+#
+# Logs:
+#   docker compose logs -f backend
+#   docker compose logs -f frontend
+# ============================================================
+
+services:
+
+  # ── MongoDB — primary store for Teams ─────────────────────────
+  mongo:
+    image: mongo:7-jammy
+    container_name: pulsedx-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: pulsedx
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - pulsedx-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── Backend — Express REST API ─────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pulsedx-backend
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      # MongoDB — uses the service name as the hostname inside Docker's network
+      MONGODB_URI: mongodb://mongo:27017/pulsedx
+      # CORS — allow the frontend container (and local browser)
+      ALLOWED_ORIGINS: http://localhost:3000,http://frontend:3000
+      # Supabase — fill in .env or override here
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      # Rate limiting
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+      RATE_LIMIT_WRITE_MAX_REQUESTS: ${RATE_LIMIT_WRITE_MAX_REQUESTS:-30}
+    ports:
+      - "5000:5000"
+    networks:
+      - pulsedx-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ── Frontend — Next.js 14 ──────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* vars are baked in at build time
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000/api}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_ENABLE_3D_HERO: ${NEXT_PUBLIC_ENABLE_3D_HERO:-true}
+        NEXT_PUBLIC_ENABLE_PARTICLES: ${NEXT_PUBLIC_ENABLE_PARTICLES:-true}
+    container_name: pulsedx-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    networks:
+      - pulsedx-network
+
+# ── Volumes ────────────────────────────────────────────────────
+volumes:
+  mongo_data:
+    driver: local
+
+# ── Network ────────────────────────────────────────────────────
+networks:
+  pulsedx-network:
+    driver: bridge

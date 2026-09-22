@@ -1,0 +1,16 @@
+# Root .dockerignore
+# Keeps the build context clean when building from the repo root.
+# Service-level builds (backend/ and frontend/) have their own .dockerignore.
+
+.git
+.gitignore
+*.log
+*.md
+!README.md
+.env
+.env.*
+.kilo
+render.yaml
+qa-api-test.ps1
+JULES_REPORT.md
+node_modules
