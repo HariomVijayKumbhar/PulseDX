@@ -13,12 +13,14 @@ interface TaskCardProps {
   onToggleStatus: (taskId: string, currentStatus: TaskStatus) => void;
 }
 
-export function TaskCard({ task, onToggleStatus }: TaskCardProps) {
-  const isDone = task.status === 'done';
+export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
+  function TaskCard({ task, onToggleStatus }, ref) {
+    const isDone = task.status === 'done';
 
-  return (
-    <motion.div
-      layout
+    return (
+      <motion.div
+        ref={ref}
+        layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
@@ -119,4 +121,7 @@ export function TaskCard({ task, onToggleStatus }: TaskCardProps) {
       </div>
     </motion.div>
   );
-}
+});
+
+TaskCard.displayName = 'TaskCard';
+
