@@ -1,4 +1,4 @@
-﻿# PulseDX — End-to-End 3D Full-Stack Developer Platform (Tasks 1–4)
+# PulseDX — End-to-End 3D Full-Stack Developer Platform (Tasks 1–4)
 
 **PulseDX** is an AI-assisted engineering productivity and task management platform featuring a high-performance **3D glassmorphic dashboard**, a **layered Express REST API**, persistent **Supabase PostgreSQL database**, **Supabase Auth**, and built-in **AI task decomposition**.
 
@@ -141,3 +141,79 @@ Open [http://localhost:3000](http://localhost:3000).
 - **Frontend (Next.js)**: Deploy to [Vercel](https://vercel.com) by pointing to the `/frontend` root directory.
 - **Backend (Express)**: Deploy to [Render](https://render.com) or [Railway](https://railway.app) by setting root directory to `/backend` with build command `npm run build` and start command `npm start`.
 - Ensure `ALLOWED_ORIGINS` on the backend matches the production frontend domain, and `NEXT_PUBLIC_API_URL` points to the deployed backend URL.
+
+---
+
+## 🐳 Running with Docker & Docker Compose
+
+Docker Compose orchestrates all three services — **MongoDB**, **Express API**, and **Next.js** — with a single command.
+
+### Service Architecture
+
+| Service    | Container           | Port   | Data store       |
+|------------|---------------------|--------|------------------|
+| `mongo`    | pulsedx-mongo       | 27017  | Persistent volume|
+| `backend`  | pulsedx-backend     | 5000   | Supabase + Mongo |
+| `frontend` | pulsedx-frontend    | 3000   | —                |
+
+> **Teams** are stored in MongoDB. **Users / Projects / Tasks** use Supabase PostgreSQL.
+
+### Prerequisites
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (v24+)
+
+### Quick Start
+
+```bash
+# 1. Create your root .env from the Docker template
+cp .env.docker.example .env
+
+# 2. Fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY
+#    (open .env in your editor)
+
+# 3. Build images and start all services
+docker compose up --build -d
+
+# 4. (Optional) Seed Supabase with sample users / projects / tasks
+docker compose exec backend npm run db:seed
+
+# 5. (Optional) Seed MongoDB with sample teams
+docker compose exec backend npm run db:seed:teams
+```
+
+### URLs (after startup)
+
+| URL                                      | Description              |
+|------------------------------------------|--------------------------|
+| http://localhost:3000                    | Frontend (Next.js)       |
+| http://localhost:5000/api/health         | API health check         |
+| http://localhost:5000/api/docs           | Swagger UI               |
+| http://localhost:5000/api/teams          | Teams endpoint (MongoDB) |
+
+### Common Commands
+
+```bash
+# View logs for a specific service
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f mongo
+
+# Stop all services (keeps volumes)
+docker compose down
+
+# Stop and wipe all data (including MongoDB volume)
+docker compose down -v
+
+# Rebuild a single service after code changes
+docker compose up --build backend -d
+```
+
+### Development Mode (Hot Reload)
+
+Run both servers with live source-file watching — no rebuilds needed on code changes:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+This mounts your local `backend/src` and `frontend/` directories into the containers and runs `tsx watch` / `next dev` inside them.
+

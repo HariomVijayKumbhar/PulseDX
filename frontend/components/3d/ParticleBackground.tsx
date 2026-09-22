@@ -85,6 +85,7 @@ export default function ParticleBackground() {
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-30 dark:opacity-40">
       <Canvas
         dpr={1}
+        style={{ pointerEvents: 'none' }}
         camera={{ position: [0, 0, 8], fov: 60 }}
         gl={{ antialias: false, alpha: true, powerPreference: 'low-power' }}
       >
