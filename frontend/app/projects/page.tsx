@@ -9,6 +9,8 @@ import { FolderKanban, Plus, Search, Layers, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CreateProjectModal } from '@/components/ui/CreateProjectModal';
+import { AiPlannerModal } from '@/components/ui/AiPlannerModal';
+import { Bot } from 'lucide-react';
 
 const CATEGORIES: { id: ProjectCategory | 'all'; label: string }[] = [
   { id: 'all', label: 'All Categories' },
@@ -24,6 +26,7 @@ export default function ProjectsPage() {
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [aiPlannerOpen, setAiPlannerOpen] = useState(false);
 
   const isInitialLoad = React.useRef(true);
 
@@ -63,13 +66,22 @@ export default function ProjectsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setCreateModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25 hover:opacity-90 active:scale-95 transition-all self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Initiative</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => setAiPlannerOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-purple-500/40 text-purple-600 dark:text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 active:scale-95 transition-all"
+          >
+            <Bot className="w-4 h-4" />
+            <span>AI Plan</span>
+          </button>
+          <button
+            onClick={() => setCreateModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25 hover:opacity-90 active:scale-95 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Initiative</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -127,6 +139,15 @@ export default function ProjectsPage() {
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         onProjectCreated={(newProj) => setProjects((prev) => [newProj, ...prev])}
+      />
+
+      <AiPlannerModal
+        isOpen={aiPlannerOpen}
+        onClose={() => setAiPlannerOpen(false)}
+        onApplied={() => {
+          // Refresh the project list after the agent creates the project + tasks
+          getProjects({}).then((res) => setProjects(res.data ?? [])).catch(() => undefined);
+        }}
       />
     </div>
   );

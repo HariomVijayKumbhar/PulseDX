@@ -4,6 +4,8 @@ export interface AiSuggestedTask {
   title: string;
   description: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  estimatedHours?: number;
+  category?: string;
 }
 
 export interface SuggestTasksOptions {

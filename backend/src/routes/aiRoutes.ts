@@ -7,8 +7,23 @@ import { writeLimiter } from '../middleware/rateLimiter';
 import { taskService } from '../services/taskService';
 import { projectService } from '../services/projectService';
 import { AiSuggestedTask } from '../models/ai.model';
+import { aiPlannerService, PlanRequest } from '../services/aiPlannerService';
 
 const router = Router();
+
+const planProjectSchema = z.object({
+  brief: z.string().min(5, 'Project brief must be at least 5 characters').max(2000),
+  taskCount: z.number().int().min(3).max(15).optional(),
+  // Optional user-supplied model config — supports any OpenAI-compatible provider
+  model: z.string().min(1).max(100).optional(),
+  apiKey: z.string().min(8).max(300).optional(),
+  baseUrl: z.string().url().optional(), // e.g. http://localhost:11434/v1 for Ollama
+  provider: z.enum(['openai', 'gemini', 'groq', 'openrouter', 'openai-compatible']).optional(),
+});
+
+const applyPlanSchema = planProjectSchema.extend({
+  projectId: z.string().uuid().optional(), // optional: add tasks to an existing project
+});
 
 const suggestTasksSchema = z.object({
   goal: z.string().min(3, 'Goal description must be at least 3 characters').max(500),
@@ -156,6 +171,89 @@ router.post(
         meta: {
           timestamp: new Date().toISOString(),
         },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * AI AGENT — Plan a project (dry-run)
+ * POST /api/ai/plan-project
+ * Returns a full plan (project name, description, ordered tasks) without saving.
+ */
+router.post(
+  '/plan-project',
+  authenticate,
+  requireAuth,
+  writeLimiter,
+  validate({ body: planProjectSchema }),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const plan = await aiPlannerService.planProject(req.body as PlanRequest);
+      res.status(200).json({
+        data: plan,
+        meta: { timestamp: new Date().toISOString() },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * AI AGENT — Plan AND apply in one shot
+ * POST /api/ai/apply-plan
+ * Generates a plan with the LLM and persists the project + all tasks for the authenticated user.
+ */
+router.post(
+  '/apply-plan',
+  authenticate,
+  requireAuth,
+  writeLimiter,
+  validate({ body: applyPlanSchema }),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const ownerId = req.user!.id;
+      const { projectId } = req.body;
+
+      // 1. Generate the plan (LLM or heuristic fallback)
+      const plan = await aiPlannerService.planProject(req.body as PlanRequest);
+
+      // 2. Resolve or create the target project
+      let targetProjectId = projectId;
+      if (!targetProjectId) {
+        const project = await projectService.createProject({
+          name: plan.projectName,
+          description: plan.description,
+          ownerId,
+        });
+        targetProjectId = project.id;
+      }
+
+      // 3. Persist all planned tasks under the project
+      const createdTasks = [];
+      for (const task of plan.tasks) {
+        const created = await taskService.createTask({
+          title: task.title,
+          description: task.description,
+          projectId: targetProjectId!,
+          status: 'todo',
+          priority: task.priority,
+        });
+        createdTasks.push(created);
+      }
+
+      res.status(201).json({
+        data: {
+          projectId: targetProjectId,
+          projectName: plan.projectName,
+          tasksCreated: createdTasks.length,
+          tasks: createdTasks,
+          provider: plan.provider,
+        },
+        meta: { timestamp: new Date().toISOString() },
       });
     } catch (error) {
       next(error);
