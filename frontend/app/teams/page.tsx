@@ -117,7 +117,7 @@ export default function TeamsPage() {
                 <span className="mx-1">·</span>
                 {team.projectIds.length} project{team.projectIds.length !== 1 ? 's' : ''}
               </div>
-              <div className="mt-3 flex-wrap gap-1.5">
+              <div className="mt-3 flex flex-wrap gap-1.5">
                 {team.members.slice(0, 4).map((m) => (
                   <span
                     key={m.userId}

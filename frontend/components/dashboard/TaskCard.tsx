@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { Task, TaskStatus } from '@/types/task';
 import { PriorityBadge, StatusBadge } from '@/components/ui/Badge';
 import { Check, Clock, Calendar, MessageSquare, Tag } from 'lucide-react';
@@ -95,10 +96,13 @@ export function TaskCard({ task, onToggleStatus }: TaskCardProps) {
 
               {/* Assignee Avatar */}
               {task.assignee ? (
-                <img
+                <Image
                   src={task.assignee.avatarUrl}
                   alt={task.assignee.name}
                   title={`Assigned to ${task.assignee.name}`}
+                  width={24}
+                  height={24}
+                  unoptimized
                   className="w-6 h-6 rounded-full object-cover ring-1 ring-primary/40"
                 />
               ) : (

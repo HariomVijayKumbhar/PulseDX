@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Project } from '@/types/project';
 import { HealthBadge, StatusBadge } from '@/components/ui/Badge';
@@ -92,11 +93,14 @@ export function ProjectCard({ project }: ProjectCardProps) {
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center -space-x-2">
             {project.members.map((member) => (
-              <img
+              <Image
                 key={member.id}
                 src={member.avatarUrl}
                 alt={member.name}
                 title={`${member.name} (${member.role})`}
+                width={28}
+                height={28}
+                unoptimized
                 className="w-7 h-7 rounded-full object-cover ring-2 ring-card"
               />
             ))}

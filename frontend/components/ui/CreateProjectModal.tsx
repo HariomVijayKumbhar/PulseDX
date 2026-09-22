@@ -144,8 +144,8 @@ export function CreateProjectModal({
               >
                 <option value="planning">Planning Phase</option>
                 <option value="in_progress">In Active Sprint</option>
-                <option value="on_track">On Track</option>
-                <option value="at_risk">At Risk</option>
+                <option value="active">Active</option>
+                <option value="on_hold">On Hold</option>
                 <option value="completed">Completed</option>
               </select>
             </div>

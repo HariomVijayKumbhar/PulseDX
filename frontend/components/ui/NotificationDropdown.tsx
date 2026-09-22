@@ -91,8 +91,8 @@ export function NotificationDropdown() {
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const [projects, tasks] = await Promise.all([getProjects(), getTasks()]);
-      setNotifications(buildNotifications(projects ?? [], tasks ?? []));
+      const [projectRes, taskRes] = await Promise.all([getProjects(), getTasks()]);
+      setNotifications(buildNotifications(projectRes?.data ?? [], taskRes?.data ?? []));
       setLoaded(true);
     } catch {
       if (!loaded) toast.error('Could not load notifications');

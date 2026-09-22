@@ -33,7 +33,7 @@ export default function ProjectsPage() {
           category: selectedCategory === 'all' ? undefined : selectedCategory,
           searchQuery: searchQuery.trim(),
         });
-        setProjects(res.data);
+        setProjects(res.data ?? []);
       } catch (err) {
         toast.error('Failed to load projects');
       } finally {

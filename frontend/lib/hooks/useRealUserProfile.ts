@@ -108,5 +108,5 @@ export function useRealUserProfile(): RealUserProfile {
       email: email || 'Not signed in',
       avatarStyle,
     };
-  }, [user, mounted, isLoading]);
+  }, [user, mounted]);
 }
