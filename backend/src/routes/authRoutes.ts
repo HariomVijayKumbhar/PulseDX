@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, supabaseAnon } from '../lib/supabaseClient';
 import { validate } from '../middleware/validate';
 import { writeLimiter } from '../middleware/rateLimiter';
 
@@ -34,22 +34,25 @@ router.post(
     try {
       const { email, password, name, avatarUrl } = req.body;
       const fullName = name || email.split('@')[0];
+      const resolvedAvatar =
+        avatarUrl || `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(fullName)}`;
 
-      // 1. Create user in Supabase Auth with auto-confirmed email
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // 1. Public signup — this is the ONLY flow that triggers Supabase's
+      //    confirmation email. Admin API users never get emails sent.
+      const { data: signUpData, error: signUpError } = await supabaseAnon.auth.signUp({
         email,
         password,
-        email_confirm: AUTO_CONFIRM,
-        user_metadata: {
-          name: fullName,
-          full_name: fullName,
-          avatar_url: avatarUrl || `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(fullName)}`,
+        options: {
+          data: { name: fullName, full_name: fullName, avatar_url: resolvedAvatar },
+          emailRedirectTo: process.env.SUPABASE_CONFIRM_REDIRECT_URL || undefined,
         },
       });
 
-      if (authError) {
-        // If user already exists in Auth, return 409
-        if (authError.message.toLowerCase().includes('already') || authError.status === 422) {
+      if (signUpError) {
+        if (
+          signUpError.message.toLowerCase().includes('already') ||
+          signUpError.status === 422
+        ) {
           return res.status(409).json({
             error: {
               code: 'USER_ALREADY_EXISTS',
@@ -57,15 +60,28 @@ router.post(
             },
           });
         }
-        return res.status(authError.status || 400).json({
+        return res.status(signUpError.status || 400).json({
           error: {
             code: 'AUTH_REGISTRATION_FAILED',
-            message: authError.message,
+            message: signUpError.message,
           },
         });
       }
 
-      const createdAuthUser = authData.user;
+      const createdAuthUser = signUpData?.user;
+      const emailConfirmationRequired =
+        !!createdAuthUser && !createdAuthUser.email_confirmed_at && !signUpData?.session;
+
+      // Dev-only: auto-confirm immediately so developers can skip the inbox step
+      if (AUTO_CONFIRM && createdAuthUser) {
+        try {
+          await supabase.auth.admin.updateUserById(createdAuthUser.id, {
+            email_confirm: true,
+          });
+        } catch (confirmErr: any) {
+          console.warn('[Auth] Dev auto-confirm failed:', confirmErr?.message);
+        }
+      }
 
       // 2. Sync to public.users table for relational queries
       if (createdAuthUser) {
@@ -73,7 +89,7 @@ router.post(
           id: createdAuthUser.id,
           email: createdAuthUser.email,
           name: fullName,
-          avatar_url: avatarUrl || `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(fullName)}`,
+          avatar_url: resolvedAvatar,
           role: 'developer',
         });
 
@@ -85,11 +101,10 @@ router.post(
       return res.status(201).json({
         data: {
           user: createdAuthUser,
-          emailConfirmationRequired: !createdAuthUser.email_confirmed_at && !AUTO_CONFIRM,
-          message:
-            createdAuthUser.email_confirmed_at || AUTO_CONFIRM
-              ? 'Account registered. You can now sign in immediately.'
-              : 'Account created! Check your inbox for the confirmation email before signing in.',
+          emailConfirmationRequired,
+          message: emailConfirmationRequired
+            ? 'Account created! Check your inbox for the confirmation email before signing in.'
+            : 'Account registered. You can now sign in immediately.',
         },
       });
     } catch (err) {

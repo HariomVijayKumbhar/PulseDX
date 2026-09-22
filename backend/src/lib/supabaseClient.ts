@@ -11,9 +11,20 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 /**
- * Singleton Supabase Client for Backend Services
- * Initialized once and imported only by services. Never in routes or controllers.
+ * Public (anon) client — used ONLY for flows that must trigger Supabase's
+ * built-in emails (e.g. signup confirmation). The service-role client above
+ * bypasses email sending, so it cannot be used for registration.
  */
+export const supabaseAnon: SupabaseClient = createClient(
+  supabaseUrl || 'https://placeholder-project.supabase.co',
+  process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key',
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
+);
 export const supabase: SupabaseClient = createClient(
   supabaseUrl || 'https://placeholder-project.supabase.co',
   supabaseKey || 'placeholder-key',
