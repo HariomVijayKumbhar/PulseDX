@@ -47,15 +47,19 @@ export default function RegisterPage() {
       const { data, error } = await signUp(email, password, fullName, avatarUrl);
       if (error) {
         toast.error(error.message || 'Failed to create account');
-      } else {
+      } else if (data?.emailConfirmationRequired) {
+        // Backend created the account but Supabase sent a confirmation email
+        toast.success('Account created! Check your inbox and confirm your email before signing in.');
+        router.push('/login?confirmed=pending');
+      } else if (data?.session) {
         toast.success('Account created successfully! Welcome to PulseDX.');
-        if (data?.session) {
-          router.push('/');
-        } else {
-          router.push('/login');
-        }
-        router.refresh();
+        router.push('/');
+      } else {
+        // Direct Supabase signup path without session (confirmation enabled in Supabase)
+        toast.success('Account created! Check your inbox and confirm your email before signing in.');
+        router.push('/login?confirmed=pending');
       }
+      router.refresh();
     } catch (err: any) {
       toast.error(err.message || 'An unexpected error occurred');
     } finally {

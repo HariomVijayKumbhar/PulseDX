@@ -13,10 +13,18 @@ const registerSchema = z.object({
   avatarUrl: z.string().url().optional(),
 });
 
+// Auto-confirm is reserved for local/dev/testing so you don't have to click
+// email links while developing. In production (Render etc.) the real
+// confirmation email flow is used.
+const AUTO_CONFIRM = process.env.NODE_ENV !== 'production' &&
+  process.env.SUPABASE_AUTO_CONFIRM_USERS === 'true';
+
 /**
  * POST /api/auth/register
- * Creates a user with auto-confirmed email via Supabase Admin API
- * and syncs them with the public.users database table.
+ * Creates a user via Supabase Admin API. Email confirmation is governed by the
+ * project's Supabase Auth settings — with "Confirm email" enabled (default)
+ * Supabase sends the confirmation email and the user must click the link
+ * before they can sign in.
  */
 router.post(
   '/register',
@@ -31,7 +39,7 @@ router.post(
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email,
         password,
-        email_confirm: true,
+        email_confirm: AUTO_CONFIRM,
         user_metadata: {
           name: fullName,
           full_name: fullName,
@@ -77,7 +85,11 @@ router.post(
       return res.status(201).json({
         data: {
           user: createdAuthUser,
-          message: 'Account registered and email auto-confirmed. You can now sign in immediately.',
+          emailConfirmationRequired: !createdAuthUser.email_confirmed_at && !AUTO_CONFIRM,
+          message:
+            createdAuthUser.email_confirmed_at || AUTO_CONFIRM
+              ? 'Account registered. You can now sign in immediately.'
+              : 'Account created! Check your inbox for the confirmation email before signing in.',
         },
       });
     } catch (err) {

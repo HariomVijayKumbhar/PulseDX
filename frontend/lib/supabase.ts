@@ -23,7 +23,12 @@ export async function signUp(email: string, password: string, fullName?: string,
     });
 
     if (res.ok) {
-      // Automatically sign in with credentials now that email is confirmed
+      const json = await res.json().catch(() => null);
+      // If email confirmation is required, do NOT auto-login — user must click the email link first
+      if (json?.data?.emailConfirmationRequired) {
+        return { data: json.data, error: null };
+      }
+      // Auto-confirmed (dev mode) — sign in immediately
       const loginRes = await signIn(email, password);
       return loginRes;
     }
